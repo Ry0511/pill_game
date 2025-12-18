@@ -1,0 +1,19 @@
+Language: Cpp
+BasedOnStyle: Chromium
+
+BinPackArguments: false
+BreakInheritanceList: BeforeColon
+BreakBeforeBinaryOperators: All
+PackConstructorInitializers: CurrentLine
+AlignArrayOfStructures: Right
+LambdaBodyIndentation: Signature
+AlignAfterOpenBracket: BlockIndent
+Cpp11BracedListStyle: true
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+AllowShortBlocksOnASingleLine: Empty
+ColumnLimit: 0
+IndentWidth: 4
+InsertBraces: true
+SortIncludes: false

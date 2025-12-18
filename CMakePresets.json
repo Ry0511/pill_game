@@ -1,0 +1,62 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "_base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}"
+    },
+    {
+      "name": "_msvc",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "cmake_crap/msvc.cmake"
+      }
+    },
+    {
+      "name": "_debug",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "_release",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "msvc-debug",
+      "displayName": "msvc debug",
+      "inherits": [
+        "_base",
+        "_msvc",
+        "_debug"
+      ]
+    },
+    {
+      "name": "msvc-release",
+      "displayName": "msvc release",
+      "inherits": [
+        "_base",
+        "_msvc",
+        "_release"
+      ]
+    }
+  ]
+}
