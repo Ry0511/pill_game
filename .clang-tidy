@@ -50,12 +50,12 @@ CheckOptions:
   cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: true
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
 
-  readability-identifier-naming.GlobalConstantCase : lower_case
+  readability-identifier-naming.GlobalConstantCase : lower_case UPPER_CASE
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
   readability-identifier-naming.EnumCase           : PascalCase
   readability-identifier-naming.StructCase         : PascalCase
   readability-identifier-naming.ClassCase          : PascalCase
-  readability-identifier-naming.MemberCase         : m_PascalCase
+  readability-identifier-naming.MemberCase         : lower_case m_PascalCase
   readability-identifier-naming.NamespaceCase      : lower_case
   readability-identifier-naming.VariableCase       : lower_case g_PascalCase
   readability-identifier-naming.FunctionCase       : lower_case _lower_case
