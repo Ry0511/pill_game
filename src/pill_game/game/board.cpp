@@ -4,8 +4,8 @@
 // Author     : -Ry
 //
 
-#include "pch.h"
-#include "pill_game/board.h"
+#include "pill_game/pch.h"
+#include "pill_game/game/board.h"
 
 namespace pill_game {
 

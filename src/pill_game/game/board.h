@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "pch.h"
+#include "pill_game/pch.h"
 
 namespace pill_game {
 

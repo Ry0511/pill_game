@@ -5,7 +5,7 @@
 //
 
 #include "pill_game/pch.h"
-#include "pill_game/logging.h"
+#include "logging.h"
 
 namespace pill_game::logging {
 

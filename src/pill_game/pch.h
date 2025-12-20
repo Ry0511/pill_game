@@ -42,7 +42,7 @@
 #include <variant>
 #include <bitset>
 
-#include "pill_game/logging.h"
+#include "util/logging.h"
 
 namespace pill_game {
 
