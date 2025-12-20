@@ -9,7 +9,7 @@ message(STATUS "${PILL_GAME_SOURCE_FILES} ${PILL_GAME_HEADER_FILES}")
 
 target_sources(pill_game PRIVATE ${PILL_GAME_SOURCE_FILES} ${PILL_GAME_HEADER_FILES})
 
-target_include_directories(pill_game PUBLIC src/)
+target_include_directories(pill_game PUBLIC ./src/)
 target_compile_features(pill_game PRIVATE cxx_std_23)
 target_compile_options(
     pill_game
