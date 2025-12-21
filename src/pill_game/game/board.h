@@ -10,14 +10,28 @@
 
 namespace pill_game {
 
-class PillGameBoard {
-   public:
-    static constexpr size_t game_board_width = 8;
-    static constexpr size_t game_board_height = 16;
-    static constexpr size_t game_board_size = game_board_width * game_board_height;
+// NOTE
+//  Arrays are Bottom to Top, that is, (0,0) is the Bottom Left
+//
 
+struct BoardInitParams {
+    std::array<uint8_t, GAME_BOARD_HEIGHT> MaxEntitiesPerRow{0};
+    std::array<uint8_t, GAME_BOARD_HEIGHT> EnemyChancePerRow{0};
+    std::array<uint8_t, GAME_BOARD_HEIGHT> PillChancePerRow{0};
+    std::array<uint8_t, GAME_BOARD_HEIGHT> BlockChancePerRow{0};
+
+    void print_init_params() noexcept;
+
+    static BoardInitParams create_difficulty(
+        uint8_t level,
+        bool allow_pills,
+        bool allow_blocks
+    ) noexcept;
+};
+
+class PillGameBoard {
    private:
-    std::array<BoardEntity, game_board_size> m_FlatGameBoard{EMPTY_ENTITY};
+    std::array<BoardEntity, GAME_BOARD_SIZE> m_FlatGameBoard{EMPTY_ENTITY};
 
    public:
     explicit PillGameBoard() noexcept = default;
@@ -30,18 +44,21 @@ class PillGameBoard {
     PillGameBoard& operator=(PillGameBoard&&) noexcept = default;
 
    public:
-    inline const auto& flat_game_board() const noexcept { return m_FlatGameBoard; }
-    inline auto& flat_game_board() noexcept { return m_FlatGameBoard; }
+    const auto& flat_game_board() const noexcept { return m_FlatGameBoard; }
+    auto& flat_game_board() noexcept { return m_FlatGameBoard; }
+
+   public:
+    void init_board(const BoardInitParams& params, std::mt19937& rng) noexcept;
 
    public:
     uint32_t enemy_count() const noexcept;
 
    public:
-    inline const BoardEntity& operator()(uint32_t row, uint32_t col) const {
-        return m_FlatGameBoard.at(row * game_board_width + col);
+    const BoardEntity& operator()(uint32_t row, uint32_t col) const {
+        return m_FlatGameBoard.at(row * GAME_BOARD_WIDTH + col);
     }
-    inline BoardEntity& operator()(uint32_t row, uint32_t col) {
-        return m_FlatGameBoard.at(row * game_board_width + col);
+    BoardEntity& operator()(uint32_t row, uint32_t col) {
+        return m_FlatGameBoard.at(row * GAME_BOARD_WIDTH + col);
     }
 };
 
