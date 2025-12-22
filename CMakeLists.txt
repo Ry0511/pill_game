@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.23)
-project(pill_game VERSION 1.0.0)
+project(
+    pill_game
+    VERSION 1.0.0
+    LANGUAGES C CXX
+)
 
 add_executable(pill_game)
 
@@ -18,3 +22,33 @@ target_compile_options(
     $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra>
 )
 target_precompile_headers(pill_game PRIVATE src/pill_game/pch.h)
+
+find_package(OpenGL REQUIRED)
+
+################################################################################
+# | SDL |
+################################################################################
+
+include(fetchcontent)
+
+fetchcontent_declare(
+    SDL3
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG release-3.2.28
+)
+
+FetchContent_MakeAvailable(SDL3)
+
+target_link_libraries(
+    pill_game
+    PRIVATE
+    OpenGL::GL
+    SDL3::SDL3
+)
+
+add_custom_command(
+    TARGET pill_game POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:SDL3::SDL3>
+    $<TARGET_FILE_DIR:pill_game>
+)

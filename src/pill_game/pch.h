@@ -68,9 +68,9 @@ static_assert(GAME_BOARD_WIDTH <= std::numeric_limits<uint8_t>::max());
 static_assert(GAME_BOARD_HEIGHT <= std::numeric_limits<uint8_t>::max());
 
 // clang-format off
-constexpr uint32_t COLOUR_RED    = 0xC40233FF;
-constexpr uint32_t COLOUR_CYAN   = 0x00CED1FF;
-constexpr uint32_t COLOUR_YELLOW = 0xFDFF00FF;
+constexpr uint32_t COLOUR_RED    = 0x970054FF;
+constexpr uint32_t COLOUR_CYAN   = 0x3078E7FF;
+constexpr uint32_t COLOUR_YELLOW = 0xB0A41AFF;
 constexpr uint32_t COLOUR_GREEN  = 0x7CFC00FF;
 constexpr uint32_t COLOUR_BLUE   = 0x0000FFFF;
 constexpr uint32_t COLOUR_BLACK  = 0x000000FF;
@@ -115,10 +115,18 @@ struct BoardEntity {
     }
     constexpr bool operator!=(const BoardEntity& rhs) const noexcept { return !(*this == rhs); }
 
-    constexpr uint32_t colour() const { return ENTITY_COLOURS[Colour]; }
+    constexpr uint32_t colour() const { return ENTITY_COLOURS.at(Colour); }
 
     constexpr bool has_gravity() const noexcept {
         return EntityType >= ETYPE_PILL;
+    }
+
+    constexpr bool is_enemy() const noexcept {
+        return EntityType == ETYPE_ENEMY;
+    }
+
+    constexpr bool is_pill() const noexcept {
+        return EntityType == ETYPE_PILL || EntityType == ETYPE_SPILL;
     }
 };
 
