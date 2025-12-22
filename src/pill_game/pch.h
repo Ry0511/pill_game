@@ -45,6 +45,9 @@
 
 #include "util/logging.h"
 
+#include "pill_game/game/board_entity.h"
+#include "pill_game/game/board_piece.h"
+
 namespace pill_game {
 
 using namespace pill_game::logging;
@@ -64,8 +67,12 @@ using std::uint8_t;
 constexpr size_t GAME_BOARD_WIDTH = 8;
 constexpr size_t GAME_BOARD_HEIGHT = 16;
 constexpr size_t GAME_BOARD_SIZE = GAME_BOARD_WIDTH * GAME_BOARD_HEIGHT;
-static_assert(GAME_BOARD_WIDTH <= std::numeric_limits<uint8_t>::max());
-static_assert(GAME_BOARD_HEIGHT <= std::numeric_limits<uint8_t>::max());
+
+static_assert(GAME_BOARD_WIDTH >= 6 && GAME_BOARD_WIDTH < std::numeric_limits<uint8_t>::max());
+static_assert(GAME_BOARD_HEIGHT >= 8 && GAME_BOARD_HEIGHT < std::numeric_limits<uint8_t>::max());
+
+constexpr size_t GAME_BOARD_TOP_ROW = GAME_BOARD_HEIGHT - 1;
+constexpr size_t GAME_BOARD_CENTRE = (GAME_BOARD_WIDTH - 1) / 2;
 
 // clang-format off
 constexpr uint32_t COLOUR_RED    = 0x970054FF;
@@ -99,71 +106,26 @@ constexpr uint8_t ROTATE_EAST  = 1;
 constexpr uint8_t ROTATE_SOUTH = 2;
 constexpr uint8_t ROTATE_WEST  = 3;
 
-struct BoardEntity {
-    uint8_t Colour     : 3{0};  // Colour Index; 1..7
-    uint8_t EntityType : 3{0};  // refer to EType constants
-    uint8_t Rotation   : 2{0};  // 0=0, 1=90, 2=180, 3=270
-    // clang-format on
-
-    constexpr bool is_empty() const noexcept {
-        return *this == BoardEntity{};
-    }
-
-    constexpr bool operator==(const BoardEntity& rhs) const noexcept {
-        return Colour == rhs.Colour
-               && EntityType == rhs.EntityType;
-    }
-    constexpr bool operator!=(const BoardEntity& rhs) const noexcept { return !(*this == rhs); }
-
-    constexpr uint32_t colour() const { return ENTITY_COLOURS.at(Colour); }
-
-    constexpr bool has_gravity() const noexcept {
-        return EntityType >= ETYPE_PILL;
-    }
-
-    constexpr bool is_enemy() const noexcept {
-        return EntityType == ETYPE_ENEMY;
-    }
-
-    constexpr bool is_pill() const noexcept {
-        return EntityType == ETYPE_PILL || EntityType == ETYPE_SPILL;
-    }
-};
-
 constexpr BoardEntity EMPTY_ENTITY{0, 0, 0};
 
 // Can't make a morpheus joke without the blue pill :sadge:
-constexpr BoardEntity RED_PILL{0, ETYPE_PILL, ROTATE_NORTH};
-constexpr BoardEntity CYAN_PILL{1, ETYPE_PILL, ROTATE_NORTH};
-constexpr BoardEntity YELLOW_PILL{2, ETYPE_PILL, ROTATE_NORTH};
-
-struct BoardPiece {
-    BoardEntity Left{EMPTY_ENTITY};
-    BoardEntity Right{EMPTY_ENTITY};
-    uint8_t Rotation{0};
-    uint8_t Column{0};
-
-    constexpr BoardPiece() noexcept = default;
-
-    constexpr BoardPiece(const BoardEntity& left, const BoardEntity& right) noexcept
-        : Left{left}, Right{right} {
-        Left.Rotation = ROTATE_EAST;
-        Right.Rotation = ROTATE_WEST;
-    };
-};
+constexpr BoardEntity PILL_RED_E{0, ETYPE_PILL, ROTATE_EAST};
+constexpr BoardEntity PILL_RED_W{0, ETYPE_PILL, ROTATE_WEST};
+constexpr BoardEntity PILL_CYAN_E{1, ETYPE_PILL, ROTATE_EAST};
+constexpr BoardEntity PILL_CYAN_W{1, ETYPE_PILL, ROTATE_WEST};
+constexpr BoardEntity PILL_YELLOW_E{2, ETYPE_PILL, ROTATE_EAST};
+constexpr BoardEntity PILL_YELLOW_W{3, ETYPE_PILL, ROTATE_WEST};
 
 constexpr std::array<BoardPiece, 9> ALL_PIECES{
-    BoardPiece{   RED_PILL,    RED_PILL},
-    BoardPiece{   RED_PILL,   CYAN_PILL},
-    BoardPiece{   RED_PILL, YELLOW_PILL},
-
-    BoardPiece{  CYAN_PILL,    RED_PILL},
-    BoardPiece{  CYAN_PILL,   CYAN_PILL},
-    BoardPiece{  CYAN_PILL, YELLOW_PILL},
-
-    BoardPiece{YELLOW_PILL,    RED_PILL},
-    BoardPiece{YELLOW_PILL,   CYAN_PILL},
-    BoardPiece{YELLOW_PILL, YELLOW_PILL},
+    BoardPiece{   PILL_RED_E,    PILL_RED_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
+    BoardPiece{   PILL_RED_E,   PILL_CYAN_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
+    BoardPiece{   PILL_RED_E, PILL_YELLOW_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
+    BoardPiece{  PILL_CYAN_W,    PILL_RED_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
+    BoardPiece{  PILL_CYAN_W,   PILL_CYAN_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
+    BoardPiece{  PILL_CYAN_W, PILL_YELLOW_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
+    BoardPiece{PILL_YELLOW_W,    PILL_RED_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
+    BoardPiece{PILL_YELLOW_W,   PILL_CYAN_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
+    BoardPiece{PILL_YELLOW_W, PILL_YELLOW_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},
 };
 
 }  // namespace pill_game

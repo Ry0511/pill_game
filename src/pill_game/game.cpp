@@ -45,6 +45,7 @@ struct Vec2   { float x, y;         };
 
 // All board sprites are assumed to be 32x32
 constexpr float board_sprite_size = 32.0F;
+constexpr float max_piece_move_speed = 1.0F / 8.0F;
 
 float cell_size = 32.0F;
 bool app_should_continue{true};
@@ -60,9 +61,15 @@ SDL_Texture* sprite_atlas{nullptr};
 Vec2 enemy_offset{};
 Vec2 pill_offset{};
 
+BoardPiece current_piece{};
+float piece_drop_timer{};
+float piece_speed_factor{3.0F};
+float piece_move_timer{max_piece_move_speed};
+
 bool enemy_sprites_use_frame_two{false};
 
-BoardInitParams the_init_params = BoardInitParams::create_difficulty(20, true, false);
+uint8_t current_level = 5;
+BoardInitParams the_init_params = BoardInitParams::create_difficulty(current_level, false, false);
 PillGameBoard the_board{};
 std::mt19937 the_random{};
 
@@ -155,8 +162,11 @@ int application_loop(void) {
 
     while (app_should_continue) {
         // reset
-        controller = {};
         process_events();
+
+        if (the_board.is_game_over()) {
+            the_board.init_board(the_init_params, the_random);
+        }
 
         uint64_t current_ticks = SDL_GetTicks();
         tick_diff = current_ticks - last_ticks;
@@ -164,18 +174,12 @@ int application_loop(void) {
         last_ticks = current_ticks;
         frame_theta += delta;
 
+        piece_move_timer -= delta;
+
         if (frame_theta >= 1.0F) {
             enemy_sprites_use_frame_two = !enemy_sprites_use_frame_two;
             frame_theta = 0.0F;
         }
-
-        the_board(0, 0).EntityType = ETYPE_PILL;
-        the_board(0, 0).Rotation = ROTATE_EAST;
-        the_board(0, 0).Colour = 0;
-
-        the_board(0, 1).EntityType = ETYPE_PILL;
-        the_board(0, 1).Rotation = ROTATE_WEST;
-        the_board(0, 1).Colour = 1;
 
         int iwidth{0};
         int iheight{0};
@@ -185,15 +189,51 @@ int application_loop(void) {
         width = static_cast<float>(iwidth);
         height = static_cast<float>(iheight);
 
+        if (controller.Left && piece_move_timer <= 0.0F) {
+            current_piece.move_left(the_board);
+            piece_move_timer = max_piece_move_speed;
+        }
+
+        if (controller.Right  && piece_move_timer <= 0.0F) {
+            current_piece.move_right(the_board);
+            piece_move_timer = max_piece_move_speed;
+        }
+
+        if (controller.A) {
+            current_piece.rotate_piece_clockwise(the_board);
+            controller.A = 0;
+        }
+
+        if (controller.B) {
+            current_piece.rotate_piece_counter_clockwise(the_board);
+            controller.B = 0;
+        }
+
+        if (controller.Down) {
+            piece_speed_factor = 10.0F;
+        } else {
+            piece_speed_factor = 3.0F;
+        }
+
+        piece_drop_timer += delta * piece_speed_factor;
+        if (piece_drop_timer >= 1.0F) {
+            piece_drop_timer = -0.5F;
+            bool can_drop = the_board.can_piece_drop(current_piece);
+            PG_LOG(Info, "Drop Piece - {}", can_drop ? "Yes" : "No");
+            std::cout << std::flush;
+
+            if (can_drop) {
+                current_piece.Row -= 1;
+            } else {
+                the_board.place_piece(current_piece);
+                current_piece = {};
+            }
+        }
         draw_game_board();
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         SDL_RenderTextureTiled(renderer, background_texture, nullptr, 32.0F, nullptr);
-
-        SDL_FRect atlas_region{0, 200, 96.0F + 32.0F, 96.0F};
-        SDL_SetTextureColorMod(sprite_atlas, 0, 0, 0);
-        SDL_RenderTexture(renderer, sprite_atlas, nullptr, &atlas_region);
 
         // Centre draw the gameboard texture
         float board_width = (cell_size + cell_size * 0.25F) * static_cast<float>(GAME_BOARD_WIDTH);
@@ -253,8 +293,8 @@ void process_events(void) {
                 case SDLK_DOWN  : controller.Down  = 1; break;
                 case SDLK_LEFT  : controller.Left  = 1; break;
                 case SDLK_RIGHT : controller.Right = 1; break;
-                case SDLK_Z     : controller.A     = 1; break;
-                case SDLK_X     : controller.B     = 1; break;
+                case SDLK_X     : controller.A     = 1; break;
+                case SDLK_Z     : controller.B     = 1; break;
                 case SDLK_ESCAPE: controller.Pause = 1; break;
                 case SDLK_RETURN: controller.Start = 1; break;
                 }
@@ -272,8 +312,8 @@ void process_events(void) {
                 case SDLK_DOWN  : controller.Down  = 0; break;
                 case SDLK_LEFT  : controller.Left  = 0; break;
                 case SDLK_RIGHT : controller.Right = 0; break;
-                case SDLK_Z     : controller.A     = 0; break;
-                case SDLK_X     : controller.B     = 0; break;
+                case SDLK_X     : controller.A     = 0; break;
+                case SDLK_Z     : controller.B     = 0; break;
                 case SDLK_ESCAPE: controller.Pause = 0; break;
                 case SDLK_RETURN: controller.Start = 0; break;
                 }
@@ -290,6 +330,53 @@ void draw_game_board(void) {
     SDL_SetRenderTarget(renderer, gameboard_texture);
     SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
     SDL_RenderClear(renderer);
+
+    auto draw_piece = [](uint32_t row, uint32_t col, const BoardEntity& entity) -> void {
+        uint32_t colour = entity.colour();
+        uint8_t r = (colour & 0xFF000000) >> 24;
+        uint8_t g = (colour & 0x00FF0000) >> 16;
+        uint8_t b = (colour & 0x0000FF00) >> 8;
+        uint8_t a = (colour & 0x000000FF);
+
+        uint32_t flipped_row = (GAME_BOARD_HEIGHT - 1) - row;
+        SDL_FRect rect{
+            static_cast<float>(col) * cell_size,
+            static_cast<float>(flipped_row) * cell_size,
+            cell_size,
+            cell_size
+        };
+
+        bool requires_rotation = entity.EntityType == ETYPE_PILL;
+        float yoffset = requires_rotation ? 0.0F : 32.0F;
+
+        SDL_FRect img_src{
+            pill_offset.x,
+            pill_offset.y + yoffset,
+            board_sprite_size,
+            board_sprite_size,
+        };
+        SDL_SetTextureColorMod(sprite_atlas, r, g, b);
+
+        if (!requires_rotation) {
+            SDL_RenderTexture(renderer, sprite_atlas, &img_src, &rect);
+        } else {
+            SDL_RenderTextureRotated(
+                renderer,
+                sprite_atlas,
+                &img_src,
+                &rect,
+                90.0 * static_cast<double>(entity.Rotation),
+                nullptr,
+                SDL_FLIP_NONE
+            );
+        }
+    };
+
+    const auto& [lr, lc] = current_piece.left_piece_pos();
+    draw_piece(lr, lc, current_piece.Left);
+
+    const auto& [rr, rc] = current_piece.right_piece_pos();
+    draw_piece(rr, rc, current_piece.Right);
 
     for (uint32_t row = 0; row < GAME_BOARD_HEIGHT; ++row) {
         uint32_t flipped_row = (GAME_BOARD_HEIGHT - 1) - row;
@@ -328,30 +415,7 @@ void draw_game_board(void) {
                 SDL_SetTextureColorMod(sprite_atlas, r, g, b);
                 SDL_RenderTexture(renderer, sprite_atlas, &img_src, &rect);
             } else if (entity.is_pill()) {
-                bool requires_rotation = entity.EntityType == ETYPE_PILL;
-                float yoffset = requires_rotation ? 0.0F : 32.0F;
-
-                SDL_FRect img_src{
-                    pill_offset.x,
-                    pill_offset.y + yoffset,
-                    board_sprite_size,
-                    board_sprite_size,
-                };
-                SDL_SetTextureColorMod(sprite_atlas, r, g, b);
-
-                if (!requires_rotation) {
-                    SDL_RenderTexture(renderer, sprite_atlas, &img_src, &rect);
-                } else {
-                    SDL_RenderTextureRotated(
-                        renderer,
-                        sprite_atlas,
-                        &img_src,
-                        &rect,
-                        90.0 * static_cast<double>(entity.Rotation),
-                        nullptr,
-                        SDL_FLIP_NONE
-                    );
-                }
+                draw_piece(row, col, entity);
             }
         }
     }

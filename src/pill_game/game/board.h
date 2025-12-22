@@ -52,13 +52,35 @@ class PillGameBoard {
 
    public:
     uint32_t enemy_count() const noexcept;
+    bool is_game_over() const noexcept;
+
+   public:
+    // Checks to see if the given piece can drop to the next row
+    bool can_piece_drop(const BoardPiece& piece) const noexcept;
+    bool can_place_piece(const BoardPiece& piece) const noexcept;
+    void place_piece(const BoardPiece& piece) noexcept;
+    void remove_piece(const BoardPiece& piece) noexcept;
 
    public:
     const BoardEntity& operator()(uint32_t row, uint32_t col) const {
-        return m_FlatGameBoard.at(row * GAME_BOARD_WIDTH + col);
+        return m_FlatGameBoard.at((row * GAME_BOARD_WIDTH) + col);
     }
     BoardEntity& operator()(uint32_t row, uint32_t col) {
-        return m_FlatGameBoard.at(row * GAME_BOARD_WIDTH + col);
+        return m_FlatGameBoard.at((row * GAME_BOARD_WIDTH) + col);
+    }
+
+    const BoardEntity& operator()(const std::tuple<uint8_t, uint8_t>& pos) const noexcept {
+        return this->operator()(
+            static_cast<uint32_t>(std::get<0>(pos)),
+            static_cast<uint32_t>(std::get<1>(pos))
+        );
+    }
+
+    BoardEntity& operator()(const std::tuple<uint8_t, uint8_t>& pos) noexcept {
+        return this->operator()(
+            static_cast<uint32_t>(std::get<0>(pos)),
+            static_cast<uint32_t>(std::get<1>(pos))
+        );
     }
 };
 

@@ -19,6 +19,13 @@ uint32_t PillGameBoard::enemy_count() const noexcept {
     return count;
 }
 
+bool PillGameBoard::is_game_over() const noexcept {
+    constexpr uint32_t center_column = (GAME_BOARD_WIDTH - 1) / 2;
+    constexpr uint32_t top_row = GAME_BOARD_HEIGHT - 1;
+    return !this->operator()(top_row, center_column).is_empty()
+           || !this->operator()(top_row, center_column + 1).is_empty();
+}
+
 void BoardInitParams::print_init_params() noexcept {
     for (uint8_t row = 0; row < GAME_BOARD_HEIGHT; ++row) {
         PG_LOG(
@@ -141,6 +148,60 @@ void PillGameBoard::init_board(const BoardInitParams& params, std::mt19937& rng_
             }
         }
     }
+}
+
+bool PillGameBoard::can_piece_drop(const BoardPiece& piece) const noexcept {
+    if (piece.Row == 0) {
+        return false;
+    }
+
+    const auto& [l_row, l_col] = piece.left_piece_pos();
+    const auto& [r_row, r_col] = piece.right_piece_pos();
+
+    if (l_row == 0 || r_row == 0) {
+        return false;
+    }
+
+    // Right piece is pointing directly down
+    if (piece.Rotation == ROTATE_SOUTH) {
+        return this->operator()(r_row - 1, r_col).is_empty();
+    }
+
+    // Left piece is pointing directly down
+    if (piece.Rotation == ROTATE_NORTH) {
+        return this->operator()(l_row - 1, l_col).is_empty();
+    }
+
+    // check that both places are empty
+    return this->operator()(r_row - 1, r_col).is_empty()
+           && this->operator()(l_row - 1, l_col).is_empty();
+}
+
+bool PillGameBoard::can_place_piece(const BoardPiece& piece) const noexcept {
+
+    const auto&[rrow, rcol] = piece.right_piece_pos();
+    const auto&[lrow, lcol] = piece.left_piece_pos();
+
+    if (rcol < 0 || rcol >= GAME_BOARD_WIDTH || rrow < 0 || rrow >= GAME_BOARD_HEIGHT) {
+        return false;
+    }
+
+    if (lcol < 0 || lcol >= GAME_BOARD_WIDTH || lrow < 0 || lrow >= GAME_BOARD_HEIGHT) {
+        return false;
+    }
+
+    return this->operator()(piece.left_piece_pos()).is_empty()
+           && this->operator()(rrow, rcol).is_empty();
+}
+
+void PillGameBoard::place_piece(const BoardPiece& piece) noexcept {
+    this->operator()(piece.left_piece_pos()) = piece.Left;
+    this->operator()(piece.right_piece_pos()) = piece.Right;
+}
+
+void PillGameBoard::remove_piece(const BoardPiece& piece) noexcept {
+    this->operator()(piece.left_piece_pos()) = EMPTY_ENTITY;
+    this->operator()(piece.right_piece_pos()) = EMPTY_ENTITY;
 }
 
 }  // namespace pill_game
