@@ -17,9 +17,12 @@ namespace pill_game::game {
 
 namespace {
 
+// TODO: Need to split out the game logic and the drawing logic
+
 int application_loop(void);
 
 void process_events(void);
+void process_controller_input(void);
 void draw_game_board(void);
 
 void load_sprite_atlas(void);
@@ -46,6 +49,7 @@ struct Vec2   { float x, y;         };
 // All board sprites are assumed to be 32x32
 constexpr float board_sprite_size = 32.0F;
 constexpr float max_piece_move_speed = 1.0F / 8.0F;
+constexpr float gravity_tick_rate = 1.0F / 15.0F;
 
 float cell_size = 32.0F;
 bool app_should_continue{true};
@@ -60,6 +64,11 @@ SDL_Texture* gameboard_texture{nullptr};
 SDL_Texture* sprite_atlas{nullptr};
 Vec2 enemy_offset{};
 Vec2 pill_offset{};
+
+bool ticking_gravity{false};
+float gravity_timer{0.0F};
+int32_t gravity_affected_pieces{0};
+int32_t pieces_popped{0};
 
 BoardPiece current_piece{};
 float piece_drop_timer{};
@@ -174,8 +183,6 @@ int application_loop(void) {
         last_ticks = current_ticks;
         frame_theta += delta;
 
-        piece_move_timer -= delta;
-
         if (frame_theta >= 1.0F) {
             enemy_sprites_use_frame_two = !enemy_sprites_use_frame_two;
             frame_theta = 0.0F;
@@ -189,46 +196,37 @@ int application_loop(void) {
         width = static_cast<float>(iwidth);
         height = static_cast<float>(iheight);
 
-        if (controller.Left && piece_move_timer <= 0.0F) {
-            current_piece.move_left(the_board);
-            piece_move_timer = max_piece_move_speed;
+        gravity_timer = std::max(gravity_timer - delta, -1.0F);
+
+        if (ticking_gravity) {
+            if (gravity_timer <= 0.0F) {
+                gravity_affected_pieces = the_board.tick_gravity();
+                gravity_timer = gravity_tick_rate;
+            }
+            ticking_gravity = (gravity_affected_pieces <= 0);
+        } else if (gravity_affected_pieces <= 0) {
+            ticking_gravity = false;
         }
 
-        if (controller.Right  && piece_move_timer <= 0.0F) {
-            current_piece.move_right(the_board);
-            piece_move_timer = max_piece_move_speed;
-        }
+        if (!ticking_gravity) {
+            piece_move_timer -= delta;
+            process_controller_input();
 
-        if (controller.A) {
-            current_piece.rotate_piece_clockwise(the_board);
-            controller.A = 0;
-        }
+            piece_drop_timer += delta * piece_speed_factor;
+            if (piece_drop_timer >= 1.0F) {
+                piece_drop_timer = -0.5F;
 
-        if (controller.B) {
-            current_piece.rotate_piece_counter_clockwise(the_board);
-            controller.B = 0;
-        }
-
-        if (controller.Down) {
-            piece_speed_factor = 10.0F;
-        } else {
-            piece_speed_factor = 3.0F;
-        }
-
-        piece_drop_timer += delta * piece_speed_factor;
-        if (piece_drop_timer >= 1.0F) {
-            piece_drop_timer = -0.5F;
-            bool can_drop = the_board.can_piece_drop(current_piece);
-            PG_LOG(Info, "Drop Piece - {}", can_drop ? "Yes" : "No");
-            std::cout << std::flush;
-
-            if (can_drop) {
-                current_piece.Row -= 1;
-            } else {
-                the_board.place_piece(current_piece);
-                current_piece = {};
+                if (the_board.can_piece_drop(current_piece)) {
+                    current_piece.Row -= 1;
+                } else {
+                    the_board.place_piece(current_piece);
+                    ticking_gravity = true;
+                    gravity_timer = -1.0F;
+                    current_piece = {};
+                }
             }
         }
+
         draw_game_board();
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -322,6 +320,34 @@ void process_events(void) {
             default:
                 break;
         }
+    }
+}
+
+void process_controller_input(void) {
+    if (controller.Left && piece_move_timer <= 0.0F) {
+        current_piece.move_left(the_board);
+        piece_move_timer = max_piece_move_speed;
+    }
+
+    if (controller.Right && piece_move_timer <= 0.0F) {
+        current_piece.move_right(the_board);
+        piece_move_timer = max_piece_move_speed;
+    }
+
+    if (controller.A) {
+        current_piece.rotate_piece_clockwise(the_board);
+        controller.A = 0;
+    }
+
+    if (controller.B) {
+        current_piece.rotate_piece_counter_clockwise(the_board);
+        controller.B = 0;
+    }
+
+    if (controller.Down) {
+        piece_speed_factor = 15.0F;
+    } else {
+        piece_speed_factor = 1.0F;
     }
 }
 
@@ -462,10 +488,8 @@ void load_sprite_atlas(void) {
         }
         SDL_Rect sdl_rect{rect.x, rect.y, rect.w, rect.h};
 
-        // White pixels work better with sdl's colour mod
         for (int32_t i = 0; i < img.Width * img.Height * img.Channels; i += 4) {
             Colour& p = *reinterpret_cast<Colour*>(img.Data + i);
-
             if (p.r != 0 || p.g != 0 || p.b != 0) {
                 p = Colour{255, 255, 255, 255};
             } else if (p.a == 255) {
