@@ -25,4 +25,8 @@ bool BoardEntity::is_pill() const noexcept {
     return EntityType == ETYPE_PILL || EntityType == ETYPE_SPILL;
 }
 
+bool BoardEntity::is_breakable() const noexcept {
+    return is_enemy() || is_pill() || EntityType == ETYPE_BLOCK;
+}
+
 }  // namespace pill_game

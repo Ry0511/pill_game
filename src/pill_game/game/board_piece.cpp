@@ -34,6 +34,17 @@ BoardPiece::BoardPiece()
       Column(GAME_BOARD_CENTRE) {
 }
 
+BoardPiece::BoardPiece(
+    const PillGameBoard& board,
+    uint32_t row,
+    uint32_t col
+) noexcept
+    : Row(row), Column(col) {
+    Left = board(row, col);
+    Rotation = Left.Rotation;
+    Right = board(right_piece_pos());
+}
+
 std::tuple<int8_t, int8_t> BoardPiece::left_piece_pos() const noexcept {
     return std::make_tuple(Row, Column);
 }
@@ -111,7 +122,6 @@ void BoardPiece::rotate_piece_counter_clockwise(const PillGameBoard& board) noex
     auto banned_multi_rotate = Right.Rotation;
 
     for (auto i = 0; i < 4; ++i) {
-
         if (Rotation == 0U) {
             Rotation = 3U;
         } else {

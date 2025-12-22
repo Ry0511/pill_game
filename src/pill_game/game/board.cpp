@@ -178,9 +178,8 @@ bool PillGameBoard::can_piece_drop(const BoardPiece& piece) const noexcept {
 }
 
 bool PillGameBoard::can_place_piece(const BoardPiece& piece) const noexcept {
-
-    const auto&[rrow, rcol] = piece.right_piece_pos();
-    const auto&[lrow, lcol] = piece.left_piece_pos();
+    const auto& [rrow, rcol] = piece.right_piece_pos();
+    const auto& [lrow, lcol] = piece.left_piece_pos();
 
     if (rcol < 0 || rcol >= GAME_BOARD_WIDTH || rrow < 0 || rrow >= GAME_BOARD_HEIGHT) {
         return false;
@@ -202,6 +201,116 @@ void PillGameBoard::place_piece(const BoardPiece& piece) noexcept {
 void PillGameBoard::remove_piece(const BoardPiece& piece) noexcept {
     this->operator()(piece.left_piece_pos()) = EMPTY_ENTITY;
     this->operator()(piece.right_piece_pos()) = EMPTY_ENTITY;
+}
+
+bool PillGameBoard::can_tick_gravity(uint32_t row, uint32_t col) const noexcept {
+    const BoardEntity& ent = this->operator()(row, col);
+
+    // cell is empty or at the bottom of the board
+    if (ent.is_empty() || row == 0 || !ent.has_gravity()) {
+        return false;
+    }
+
+    // something is beneath us
+    if (!this->operator()(row - 1, col).is_empty()) {
+        return false;
+    }
+
+    if (ent.EntityType == ETYPE_PILL) {
+        BoardPiece piece{*this, row, col};
+        const auto& [rrow, rcol] = piece.right_piece_pos();
+        return rrow != 0 && this->operator()(rrow - 1, rcol).is_empty();
+    }
+
+    return true;
+}
+
+int32_t PillGameBoard::horizontal_colour_count(uint32_t row, uint32_t col) const noexcept {
+    uint32_t count{0};
+    uint32_t column{col};
+    auto req_colour = this->operator()(row, col).Colour;
+
+    // Scan forward
+    for (auto i = (column + 1); i < GAME_BOARD_WIDTH; ++i) {
+        const auto& ent = this->operator()(row, i);
+        if (ent.Colour != req_colour || !ent.is_breakable()) {
+            break;
+        }
+        ++count;
+    }
+
+    // Scan backwards
+    for (auto i = column; i >= 0; --i) {
+        const auto& ent = this->operator()(row, i);
+        if (ent.Colour != req_colour || !ent.is_breakable()) {
+            break;
+        }
+        ++count;
+    }
+
+    return count;
+}
+
+int32_t PillGameBoard::vertical_colour_count(uint32_t row, uint32_t col) const noexcept {
+    uint32_t count{0};
+    uint32_t column{col};
+    auto req_colour = this->operator()(row, col).Colour;
+
+    // Scan forward
+    for (auto i = (column + 1); i < GAME_BOARD_WIDTH; ++i) {
+        const auto& ent = this->operator()(row, i);
+        if (ent.Colour != req_colour || !ent.is_breakable()) {
+            break;
+        }
+        ++count;
+    }
+
+    // Scan backwards
+    for (auto i = column; i >= 0; --i) {
+        const auto& ent = this->operator()(row, i);
+        if (ent.Colour != req_colour || !ent.is_breakable()) {
+            break;
+        }
+        ++count;
+    }
+
+    return count;
+}
+
+int32_t PillGameBoard::tick_gravity() noexcept {
+    int32_t pieces_moved{0};
+    for (uint32_t row = 1; row < GAME_BOARD_HEIGHT; ++row) {
+        for (uint32_t col = 0; col < GAME_BOARD_WIDTH; ++col) {
+            if (can_tick_gravity(row, col)) {
+                ++pieces_moved;
+                auto& left = this->operator()(row, col);
+                auto& right = this->operator()(row - 1, col);
+                right = left;
+                left = EMPTY_ENTITY;
+            }
+        }
+    }
+    return pieces_moved;
+}
+
+int32_t PillGameBoard::break_pieces(int32_t min_req_for_break) noexcept {
+    // TODO: need a state for a 'Broken' entity, could be done as a colour or as an actual entity type.
+    PillGameBoard clone = *this;
+    uint32_t pieces_broken{0};
+    for (uint32_t row = 0; row < GAME_BOARD_HEIGHT; ++row) {
+        for (uint32_t col = 0; col < GAME_BOARD_WIDTH; ++col) {
+            if (
+                this->operator()(row, col).is_breakable()
+                && (horizontal_colour_count(row, col) >= min_req_for_break
+                    || vertical_colour_count(row, col) >= min_req_for_break)
+            ) {
+                clone.operator()(row, col) = EMPTY_ENTITY;
+                ++pieces_broken;
+            }
+        }
+    }
+    *this = clone;
+    return pieces_broken;
 }
 
 }  // namespace pill_game

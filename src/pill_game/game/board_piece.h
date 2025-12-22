@@ -34,6 +34,8 @@ struct BoardPiece {
     ) noexcept
         : Left{left}, Right{right}, Rotation{rotation}, Row{row} {};
 
+    BoardPiece(const PillGameBoard& board, uint32_t row, uint32_t col) noexcept;
+
     std::tuple<int8_t, int8_t> left_piece_pos() const noexcept;
     std::tuple<int8_t, int8_t> right_piece_pos() const noexcept;
 

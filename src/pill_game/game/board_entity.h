@@ -33,6 +33,7 @@ struct BoardEntity {
     bool has_gravity() const noexcept;
     bool is_enemy() const noexcept;
     bool is_pill() const noexcept;
+    bool is_breakable() const noexcept;
 };
 
 }  // namespace pill_game

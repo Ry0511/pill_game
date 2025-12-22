@@ -60,6 +60,13 @@ class PillGameBoard {
     bool can_place_piece(const BoardPiece& piece) const noexcept;
     void place_piece(const BoardPiece& piece) noexcept;
     void remove_piece(const BoardPiece& piece) noexcept;
+    bool can_tick_gravity(uint32_t row, uint32_t col) const noexcept;
+
+    int32_t horizontal_colour_count(uint32_t row, uint32_t col) const noexcept;
+    int32_t vertical_colour_count(uint32_t row, uint32_t col) const noexcept;
+
+    int32_t tick_gravity() noexcept;
+    int32_t break_pieces(int32_t min_req_for_break = 4) noexcept;
 
    public:
     const BoardEntity& operator()(uint32_t row, uint32_t col) const {
