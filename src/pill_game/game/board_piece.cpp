@@ -82,18 +82,18 @@ void BoardPiece::rotate_piece_clockwise(const PillGameBoard& board) noexcept {
     }
 
     auto rotate = Rotation;
-    auto i = 4;
-    bool banned_rotate = false;
+    auto banned_multi_rotate = Right.Rotation;
 
-    do {
+    for (auto i = 0; i < 4; ++i) {
         Rotation = (Rotation + 1U) % 4U;
-        --i;
-        banned_rotate = (rotate == ROTATE_NORTH && Rotation == ROTATE_SOUTH)
-                        || (rotate == ROTATE_SOUTH && Rotation == ROTATE_NORTH);
 
-    } while (!board.can_place_piece(*this) && !banned_rotate && i > 0);
+        bool banned_rotation = i > 0 && Rotation == banned_multi_rotate;
+        if (!banned_rotation && board.can_place_piece(*this)) {
+            break;
+        }
+    }
 
-    if (!board.can_place_piece(*this) || banned_rotate) {
+    if (!board.can_place_piece(*this)) {
         Rotation = rotate;
         return;
     }
@@ -108,22 +108,23 @@ void BoardPiece::rotate_piece_counter_clockwise(const PillGameBoard& board) noex
     }
 
     auto rotate = Rotation;
-    auto i = 4;
-    auto banned_rotate = false;
+    auto banned_multi_rotate = Right.Rotation;
 
-    do {
-        if (Rotation == 0) {
+    for (auto i = 0; i < 4; ++i) {
+
+        if (Rotation == 0U) {
             Rotation = 3U;
         } else {
             --Rotation;
         }
-        --i;
 
-        banned_rotate = (rotate == ROTATE_NORTH && Rotation == ROTATE_SOUTH)
-                        || (rotate == ROTATE_SOUTH && Rotation == ROTATE_NORTH);
-    } while (!board.can_place_piece(*this) && !banned_rotate && i > 0);
+        bool banned_rotation = i > 0 && Rotation == banned_multi_rotate;
+        if (!banned_rotation && board.can_place_piece(*this)) {
+            break;
+        }
+    }
 
-    if (!board.can_place_piece(*this) || banned_rotate) {
+    if (!board.can_place_piece(*this)) {
         Rotation = rotate;
         return;
     }
