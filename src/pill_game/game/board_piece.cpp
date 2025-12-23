@@ -92,6 +92,18 @@ void BoardPiece::rotate_piece_clockwise(const PillGameBoard& board) noexcept {
         return;
     }
 
+    // TODO: After some play testing this current rotation system doesn't work. Rotations at the
+    //  edge of the screen feel odd and it is likely because we want the rotations to still happen
+    //  naturally i.e., don't skip rotations, just try to make the rotation work by actually
+    //  rotating the piece.
+    //
+    // i.e.,
+    //
+    // X X X X    X X X X    X X X X    G X X X    X X X X
+    // R G X X -> R X X X -> G R X X -> R X X X -> R G X X
+    // X X X X    G X X X    X X X X    X X X X    X X X X
+    //
+
     auto rotate = Rotation;
     auto banned_multi_rotate = Right.Rotation;
 
