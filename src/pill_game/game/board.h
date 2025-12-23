@@ -19,6 +19,7 @@ struct BoardInitParams {
     std::array<uint8_t, GAME_BOARD_HEIGHT> EnemyChancePerRow{0};
     std::array<uint8_t, GAME_BOARD_HEIGHT> PillChancePerRow{0};
     std::array<uint8_t, GAME_BOARD_HEIGHT> BlockChancePerRow{0};
+    uint8_t MaxConnectedColours{2};
 
     void print_init_params() noexcept;
 

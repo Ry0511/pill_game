@@ -140,11 +140,24 @@ void PillGameBoard::init_board(const BoardInitParams& params, std::mt19937& rng_
 
             for (const auto& etype_chance : etype_chances) {
                 const auto& [chance, etype] = etype_chance;
-                if (val <= chance) {
-                    entity.EntityType = etype;
-                    entity.Colour = colour_dist(rng_device);
-                    ++entity_count;
+
+                if (val > chance) {
+                    continue;
                 }
+                entity.EntityType = etype;
+                entity.Colour = colour_dist(rng_device);
+                auto max_iter = 10; // upper bound
+
+                while (
+                    horizontal_colour_count(row, col) > params.MaxConnectedColours
+                    || vertical_colour_count(row, col) > params.MaxConnectedColours
+                    && max_iter > 0 // not sure if this is required but just to be safe
+                ) {
+                    entity.Colour = colour_dist(rng_device);
+                    --max_iter;
+                }
+
+                ++entity_count;
             }
         }
     }
