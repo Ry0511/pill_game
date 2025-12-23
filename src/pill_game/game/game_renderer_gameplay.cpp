@@ -20,13 +20,12 @@ constexpr size_t TIMER_ENEMY_TEX2     = 2;
 constexpr size_t TIMER_PIECE_DROP     = 3;
 constexpr size_t TIMER_PIECE_HMOVE    = 4;
 constexpr size_t TIMER_PIECE_VMOVE    = 5;
-constexpr size_t TIMER_NOISY_BOARD    = 6;
+constexpr size_t TIMER_BOARD_TICKING  = 6;
 constexpr size_t TIMER_GRAVITY_TICK   = 7;
 constexpr size_t TIMER_ENT_BREAK_TICK = 8;
 // clang-format on
 
-int32_t noise_max_row = 1;
-int32_t noise_max_col = 1;
+int32_t startup_max_index = 0;
 int32_t enemy_frame_tex1 = 0;
 int32_t enemy_frame_tex2 = 0;
 int32_t entity_updates_from_gravity = 0;
@@ -34,7 +33,9 @@ int32_t entities_broken_last_frame = 0;
 
 void first_tick_setup(void);
 void render_game_board(void);
+void draw_cell_entity(const BoardEntity& ent, int32_t row, int32_t col);
 void render_game_board_texture(void);
+void handle_input(void);
 
 SDL_FRect enemy_texture_pos(bool alt_enemy, int frame) {
     const auto& bounds = ctx().AssetBounds[ASSET_INDEX_ENEMY];
@@ -54,12 +55,13 @@ void tick_scene_playing(void) {
     }
 
     auto& board = ctx().TheBoard;
+    auto& the_piece = ctx().ThePiece;
 
+    // basic sprite enemy sprite animation
     if (timer(TIMER_ENEMY_TEX1).expired()) {
         timer(TIMER_ENEMY_TEX1).reset();
         enemy_frame_tex1 = (enemy_frame_tex1 + 1) % 2;
     }
-
     if (timer(TIMER_ENEMY_TEX2).expired()) {
         timer(TIMER_ENEMY_TEX2).reset();
         enemy_frame_tex2 = (enemy_frame_tex2 + 1) % 2;
@@ -73,8 +75,7 @@ void tick_scene_playing(void) {
         return;
     }
 
-    noise_max_row = GAME_BOARD_HEIGHT;
-    noise_max_col = GAME_BOARD_WIDTH;
+    startup_max_index = static_cast<uint32_t>(board.flat_game_board().size());
 
     if (timer(TIMER_GRAVITY_TICK).expired()) {
         timer(TIMER_GRAVITY_TICK).reset();
@@ -91,8 +92,25 @@ void tick_scene_playing(void) {
     }
 
     if (entity_updates_from_gravity > 0 || entities_broken_last_frame > 0) {
+        timer(TIMER_PIECE_DROP).reset();
         return;
     }
+
+    if (timer(TIMER_PIECE_DROP).expired()) {
+        timer(TIMER_PIECE_DROP).reset();
+        if (board.can_piece_drop(ctx().ThePiece)) {
+            --the_piece.Row;
+        } else {
+            board.place_piece(ctx().ThePiece);
+            entities_broken_last_frame = board.break_pieces();
+            constexpr auto max_val = static_cast<int32_t>(ALL_PIECES.size() - 1ULL);
+            auto piece_dist = std::uniform_int_distribution<int32_t>(0, max_val);
+            the_piece = ALL_PIECES.at(piece_dist(rng()));
+            the_piece.Column = GAME_BOARD_CENTRE;
+        }
+    }
+
+    handle_input();
 
     if (board.is_game_over() || board.enemy_count() == 0) {
         ctx().RequestedScene = Scene::GameFinished;
@@ -102,19 +120,21 @@ void tick_scene_playing(void) {
 namespace {
 
 void first_tick_setup(void) {
-    noise_max_row = 1;
-    noise_max_col = 1;
+    startup_max_index = 0;
+
+    float t = static_cast<float>(ctx().CurrentLevel) / 20.0F;
+    const float speed = 1.0F + (0.0F * t);
 
     // clang-format off
-    timer(TIMER_BOARD_BUILDING) = Timer{ 15.0F , 1.0F , 15.0F };
-    timer(TIMER_ENEMY_TEX1)     = Timer{ 0.2F  , 1.0F , 0.2F  };
-    timer(TIMER_ENEMY_TEX2)     = Timer{ 0.2F  , 1.35F, 0.2F  };
-    timer(TIMER_PIECE_DROP)     = Timer{ 1.0F  , 1.0F , 1.0F  };
-    timer(TIMER_PIECE_HMOVE)    = Timer{ 1.0F  , 10.0F, 1.0F  };
-    timer(TIMER_PIECE_VMOVE)    = Timer{ 1.0F  , 10.0F, 1.0F  };
-    timer(TIMER_NOISY_BOARD)    = Timer{ 0.3F  , 1.0F , 0.3F  };
-    timer(TIMER_GRAVITY_TICK)   = Timer{ 0.33F , 1.0F , 0.33F };
-    timer(TIMER_ENT_BREAK_TICK) = Timer{ 0.66F , 1.0F , 0.66F };
+    timer(TIMER_BOARD_BUILDING) = Timer{15.0F, 1.0F  , 15.0F };
+    timer(TIMER_ENEMY_TEX1)     = Timer{0.2F , 1.0F  , 0.2F  };
+    timer(TIMER_ENEMY_TEX2)     = Timer{0.2F , 1.35F , 0.2F  };
+    timer(TIMER_PIECE_DROP)     = Timer{1.0F , speed , 1.0F  };
+    timer(TIMER_PIECE_HMOVE)    = Timer{1.0F , 8.0F  , 1.0F  };
+    timer(TIMER_PIECE_VMOVE)    = Timer{1.0F , 10.0F , 1.0F  };
+    timer(TIMER_BOARD_TICKING)  = Timer{0.02F, 1.0F  , 0.02F };
+    timer(TIMER_GRAVITY_TICK)   = Timer{0.25F, 1.0F  , 0.25F };
+    timer(TIMER_ENT_BREAK_TICK) = Timer{0.66F, 1.0F  , 0.66F };
     // clang-format on
 
     // initialise the game board with the current difficulty settings
@@ -129,15 +149,16 @@ void first_tick_setup(void) {
 }
 
 void render_game_board(void) {
-    if (timer(TIMER_NOISY_BOARD).expired()) {
-        timer(TIMER_NOISY_BOARD).reset();
-        noise_max_row = std::min(noise_max_row + 1, static_cast<int32_t>(GAME_BOARD_HEIGHT));
-        noise_max_col = std::min(noise_max_col + 1, static_cast<int32_t>(GAME_BOARD_WIDTH));
-        if (noise_max_row == GAME_BOARD_HEIGHT) {
+    if (timer(TIMER_BOARD_TICKING).expired()) {
+        timer(TIMER_BOARD_TICKING).reset();
+        const auto max_size = static_cast<int32_t>(ctx().TheBoard.flat_game_board().size());
+        startup_max_index = std::min(startup_max_index + 1, max_size);
+        if (startup_max_index == max_size) {
             timer(TIMER_BOARD_BUILDING).Value = 0.0F;
         }
     }
 
+    const auto& cur_piece = ctx().ThePiece;
     auto* renderer = ctx().Renderer;
     auto* prev_texture = SDL_GetRenderTarget(renderer);
 
@@ -147,57 +168,69 @@ void render_game_board(void) {
 
     const PillGameBoard& board = ctx().TheBoard;
 
-    for (int32_t row = 0; row < noise_max_row; row++) {
-        int32_t flipped_row = (GAME_BOARD_HEIGHT - 1) - row;
-        for (int32_t col = 0; col < noise_max_col; col++) {
-            const auto& ent = board(row, col);
-            if (ent.is_empty()) {
-                continue;
-            }
-
-            SDL_FRect dst{col * CELL_SIZE, flipped_row * CELL_SIZE, CELL_SIZE, CELL_SIZE};
-            SDL_FRect src{};
-            int32_t rotation = 0;
-
-            if (ent.is_pill()) {
-                src = ctx().AssetBounds[ASSET_INDEX_PILL].as<SDL_FRect>();
-                if (ent.EntityType == ETYPE_SPILL) {
-                    src.x += CELL_SIZE;
-                } else if (ent.EntityType == ETYPE_BROKEN) {
-                    src.x += CELL_SIZE * 2.0F;
-                }
-
-            } else if (ent.is_enemy()) {
-                bool is_alt_enemy = ((row + col) % 2 != 0);
-                src = enemy_texture_pos(
-                    is_alt_enemy,
-                    is_alt_enemy ? enemy_frame_tex2 : enemy_frame_tex1
-                );
-            }
-
-            src.w = CELL_SIZE;
-            src.h = CELL_SIZE;
-
-            Colour colour = ent.colour();
-            SDL_SetTextureColorMod(atlas(), colour.Red, colour.Green, colour.Blue);
-            if (ent.Rotation != 0) {
-                SDL_RenderTextureRotated(
-                    renderer,
-                    atlas(),
-                    &src,
-                    &dst,
-                    static_cast<double>(ent.Rotation * 90.0),
-                    nullptr,
-                    SDL_FLIP_NONE
-                );
-            } else {
-                SDL_RenderTexture(renderer, atlas(), &src, &dst);
-            }
-            SDL_SetTextureColorMod(atlas(), 255, 255, 255);
+    for (int32_t i = 0; i < startup_max_index; ++i) {
+        const auto& ent = board.flat_game_board().at(i);
+        if (ent.is_empty()) {
+            continue;
         }
+        draw_cell_entity(ent, i / GAME_BOARD_WIDTH, i % GAME_BOARD_WIDTH);
     }
 
+    if (!timer(TIMER_BOARD_BUILDING).expired()) {
+        SDL_SetRenderTarget(renderer, prev_texture);
+        return;
+    }
+
+    // draw current piece
+    draw_cell_entity(cur_piece.Left, cur_piece.Row, cur_piece.Column);
+    const auto& [row, col] = cur_piece.right_piece_pos();
+    draw_cell_entity(cur_piece.Right, row, col);
+
     SDL_SetRenderTarget(renderer, prev_texture);
+}
+
+void draw_cell_entity(const BoardEntity& ent, int32_t row, int32_t col) {
+    auto* renderer = ctx().Renderer;
+    const int32_t flipped_row = (GAME_BOARD_HEIGHT - 1) - row;
+    SDL_FRect dst{col * CELL_SIZE, flipped_row * CELL_SIZE, CELL_SIZE, CELL_SIZE};
+    SDL_FRect src{};
+    int32_t rotation = 0;
+
+    if (ent.is_pill()) {
+        src = ctx().AssetBounds[ASSET_INDEX_PILL].as<SDL_FRect>();
+        if (ent.EntityType == ETYPE_SPILL) {
+            src.x += CELL_SIZE;
+        } else if (ent.EntityType == ETYPE_BROKEN) {
+            src.x += CELL_SIZE * 2.0F;
+        }
+
+    } else if (ent.is_enemy()) {
+        bool is_alt_enemy = ((row + col) % 2 != 0);
+        src = enemy_texture_pos(
+            is_alt_enemy,
+            is_alt_enemy ? enemy_frame_tex2 : enemy_frame_tex1
+        );
+    }
+
+    src.w = CELL_SIZE;
+    src.h = CELL_SIZE;
+
+    Colour colour = ent.colour();
+    SDL_SetTextureColorMod(atlas(), colour.Red, colour.Green, colour.Blue);
+    if (ent.Rotation != 0) {
+        SDL_RenderTextureRotated(
+            renderer,
+            atlas(),
+            &src,
+            &dst,
+            static_cast<double>(ent.Rotation * 90.0),
+            nullptr,
+            SDL_FLIP_NONE
+        );
+    } else {
+        SDL_RenderTexture(renderer, atlas(), &src, &dst);
+    }
+    SDL_SetTextureColorMod(atlas(), 255, 255, 255);
 }
 
 void render_game_board_texture(void) {
@@ -229,6 +262,41 @@ void render_game_board_texture(void) {
     };
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderTexture(renderer, ctx().GameplayTexture, nullptr, &dest);
+}
+
+void handle_input(void) {
+    auto& input = ctx().Input;
+    auto& board = ctx().TheBoard;
+    auto& the_piece = ctx().ThePiece;
+
+    bool can_move_horizontally = timer(TIMER_PIECE_HMOVE).expired();
+    if (can_move_horizontally && input.Left != 0) {
+        the_piece.move_left(board);
+        timer(TIMER_PIECE_HMOVE).reset();
+    }
+
+    if (can_move_horizontally && input.Right != 0) {
+        the_piece.move_right(board);
+        timer(TIMER_PIECE_HMOVE).reset();
+    }
+
+    float t = static_cast<float>(ctx().CurrentLevel) / 20.0F;
+
+    if (input.Down != 0) {
+        timer(TIMER_PIECE_DROP).Speed = 10.0F;
+    } else {
+        timer(TIMER_PIECE_DROP).Speed = 1.0F + (0.0F * t);
+    }
+
+    if (input.A != 0) {
+        the_piece.rotate_piece_clockwise(board);
+        input.A = 0;
+    }
+
+    if (input.B != 0) {
+        the_piece.rotate_piece_counter_clockwise(board);
+        input.B = 0;
+    }
 }
 
 }  // namespace

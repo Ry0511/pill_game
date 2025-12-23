@@ -128,6 +128,7 @@ struct GameContext {
     float DeltaTime{0.0F};
     std::array<Timer, 16> Timers{};
     PillGameBoard TheBoard{};
+    BoardPiece ThePiece{};
 };
 
 std::mt19937& rng(void) noexcept;
