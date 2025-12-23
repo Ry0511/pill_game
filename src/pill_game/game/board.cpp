@@ -22,8 +22,8 @@ uint32_t PillGameBoard::enemy_count() const noexcept {
 bool PillGameBoard::is_game_over() const noexcept {
     constexpr uint32_t center_column = (GAME_BOARD_WIDTH - 1) / 2;
     constexpr uint32_t top_row = GAME_BOARD_HEIGHT - 1;
-    return !this->operator()(top_row, center_column).is_empty()
-           || !this->operator()(top_row, center_column + 1).is_empty();
+    return this->operator()(top_row, center_column).is_solid()
+           && this->operator()(top_row, center_column + 1).is_solid();
 }
 
 void BoardInitParams::print_init_params() noexcept {
@@ -106,7 +106,7 @@ void PillGameBoard::init_board(const BoardInitParams& params, std::mt19937& rng_
     m_FlatGameBoard.fill(EMPTY_ENTITY);
 
     auto chance_dist = std::uniform_int_distribution<int32_t>(0, 100);
-    auto colour_dist = std::uniform_int_distribution<int32_t>(0, 3);
+    auto colour_dist = std::uniform_int_distribution<int32_t>(0, 2);
 
     auto col_indicies = std::array<uint8_t, GAME_BOARD_WIDTH>{};
     for (uint8_t row = 0; row < GAME_BOARD_WIDTH; ++row) {
@@ -164,17 +164,17 @@ bool PillGameBoard::can_piece_drop(const BoardPiece& piece) const noexcept {
 
     // Right piece is pointing directly down
     if (piece.Rotation == ROTATE_SOUTH) {
-        return this->operator()(r_row - 1, r_col).is_empty();
+        return !this->operator()(r_row - 1, r_col).is_solid();
     }
 
     // Left piece is pointing directly down
     if (piece.Rotation == ROTATE_NORTH) {
-        return this->operator()(l_row - 1, l_col).is_empty();
+        return !this->operator()(l_row - 1, l_col).is_solid();
     }
 
     // check that both places are empty
-    return this->operator()(r_row - 1, r_col).is_empty()
-           && this->operator()(l_row - 1, l_col).is_empty();
+    return !this->operator()(r_row - 1, r_col).is_solid()
+           && !this->operator()(l_row - 1, l_col).is_solid();
 }
 
 bool PillGameBoard::can_place_piece(const BoardPiece& piece) const noexcept {
@@ -189,8 +189,8 @@ bool PillGameBoard::can_place_piece(const BoardPiece& piece) const noexcept {
         return false;
     }
 
-    return this->operator()(piece.left_piece_pos()).is_empty()
-           && this->operator()(rrow, rcol).is_empty();
+    return !this->operator()(piece.left_piece_pos()).is_solid()
+           && !this->operator()(rrow, rcol).is_solid();
 }
 
 void PillGameBoard::place_piece(const BoardPiece& piece) noexcept {
@@ -211,38 +211,55 @@ bool PillGameBoard::can_tick_gravity(uint32_t row, uint32_t col) const noexcept 
         return false;
     }
 
-    // something is beneath us
-    if (!this->operator()(row - 1, col).is_empty()) {
+    const BoardEntity& down = this->operator()(row - 1, col);
+
+    if (down.is_solid()) {
         return false;
     }
 
     if (ent.EntityType == ETYPE_PILL) {
         BoardPiece piece{*this, row, col};
         const auto& [rrow, rcol] = piece.right_piece_pos();
-        return rrow != 0 && this->operator()(rrow - 1, rcol).is_empty();
+        return rrow > 0 && !this->operator()(rrow - 1, rcol).is_solid();
     }
 
     return true;
 }
 
-int32_t PillGameBoard::horizontal_colour_count(uint32_t row, uint32_t col) const noexcept {
+int32_t PillGameBoard::connected_colour_count(uint32_t row, uint32_t col, bool horizontal) const noexcept {
     uint32_t count{0};
-    uint32_t column{col};
     auto req_colour = this->operator()(row, col).Colour;
 
-    // Scan forward
-    for (auto i = (column + 1); i < GAME_BOARD_WIDTH; ++i) {
-        const auto& ent = this->operator()(row, i);
-        if (ent.Colour != req_colour || !ent.is_breakable()) {
+    const int32_t max_val = horizontal ? GAME_BOARD_WIDTH : GAME_BOARD_HEIGHT;
+    const int32_t start_val = horizontal ? col : row;
+
+    for (int32_t i = (start_val + 1); i < max_val; ++i) {
+        const auto& ent
+            = horizontal
+                  ? this->operator()(row, static_cast<uint32_t>(i))
+                  : this->operator()(static_cast<uint32_t>(i), col);
+
+        if (
+            ent.is_empty()
+            || ent.Colour != req_colour
+            || !ent.is_breakable()
+        ) {
             break;
         }
         ++count;
     }
 
-    // Scan backwards
-    for (auto i = column; i >= 0; --i) {
-        const auto& ent = this->operator()(row, i);
-        if (ent.Colour != req_colour || !ent.is_breakable()) {
+    for (int32_t i = start_val; i >= 0; --i) {
+        const auto& ent
+            = horizontal
+                  ? this->operator()(row, static_cast<uint32_t>(i))
+                  : this->operator()(static_cast<uint32_t>(i), col);
+
+        if (
+            ent.is_empty()
+            || ent.Colour != req_colour
+            || !ent.is_breakable()
+        ) {
             break;
         }
         ++count;
@@ -251,30 +268,12 @@ int32_t PillGameBoard::horizontal_colour_count(uint32_t row, uint32_t col) const
     return count;
 }
 
+int32_t PillGameBoard::horizontal_colour_count(uint32_t row, uint32_t col) const noexcept {
+    return connected_colour_count(row, col, true);
+}
+
 int32_t PillGameBoard::vertical_colour_count(uint32_t row, uint32_t col) const noexcept {
-    uint32_t count{0};
-    uint32_t column{col};
-    auto req_colour = this->operator()(row, col).Colour;
-
-    // Scan forward
-    for (auto i = (column + 1); i < GAME_BOARD_WIDTH; ++i) {
-        const auto& ent = this->operator()(row, i);
-        if (ent.Colour != req_colour || !ent.is_breakable()) {
-            break;
-        }
-        ++count;
-    }
-
-    // Scan backwards
-    for (auto i = column; i >= 0; --i) {
-        const auto& ent = this->operator()(row, i);
-        if (ent.Colour != req_colour || !ent.is_breakable()) {
-            break;
-        }
-        ++count;
-    }
-
-    return count;
+    return connected_colour_count(row, col, false);
 }
 
 int32_t PillGameBoard::tick_gravity() noexcept {
@@ -283,10 +282,10 @@ int32_t PillGameBoard::tick_gravity() noexcept {
         for (uint32_t col = 0; col < GAME_BOARD_WIDTH; ++col) {
             if (can_tick_gravity(row, col)) {
                 ++pieces_moved;
-                auto& left = this->operator()(row, col);
-                auto& right = this->operator()(row - 1, col);
-                right = left;
-                left = EMPTY_ENTITY;
+                auto& up = this->operator()(row, col);
+                auto& down = this->operator()(row - 1, col);
+                down = up;
+                up = EMPTY_ENTITY;
             }
         }
     }
@@ -294,22 +293,33 @@ int32_t PillGameBoard::tick_gravity() noexcept {
 }
 
 int32_t PillGameBoard::break_pieces(int32_t min_req_for_break) noexcept {
-    // TODO: need a state for a 'Broken' entity, could be done as a colour or as an actual entity type.
-    PillGameBoard clone = *this;
     uint32_t pieces_broken{0};
+
+    // clear out any previously broken entities
+    for (auto& ent : m_FlatGameBoard) {
+        if (ent.EntityType == ETYPE_BROKEN) {
+            ent = EMPTY_ENTITY;
+        }
+    }
+
     for (uint32_t row = 0; row < GAME_BOARD_HEIGHT; ++row) {
         for (uint32_t col = 0; col < GAME_BOARD_WIDTH; ++col) {
+            const auto& ent = this->operator()(row, col);
             if (
-                this->operator()(row, col).is_breakable()
+                ent.is_breakable()
                 && (horizontal_colour_count(row, col) >= min_req_for_break
                     || vertical_colour_count(row, col) >= min_req_for_break)
             ) {
-                clone.operator()(row, col) = EMPTY_ENTITY;
+                if (ent.EntityType == ETYPE_PILL) {
+                    BoardPiece piece{*this, row, col};
+                    this->operator()(piece.right_piece_pos()).EntityType = ETYPE_SPILL;
+                }
+                this->operator()(row, col).EntityType = ETYPE_BROKEN;
                 ++pieces_broken;
             }
         }
     }
-    *this = clone;
+
     return pieces_broken;
 }
 

@@ -4,7 +4,7 @@
 #include "vendor/stb_rect_pack.h"
 #include "vendor/stb_truetype.h"
 
-#include "pill_game/game.h"
+#include "game/game_renderer.h"
 
 using namespace pill_game;
 

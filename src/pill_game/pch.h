@@ -96,10 +96,10 @@ constexpr std::array<uint32_t, 7> ENTITY_COLOURS{
 
 constexpr uint8_t ETYPE_NONE   = 0;  // Empty type
 constexpr uint8_t ETYPE_ENEMY  = 1;  // Enemy type
-constexpr uint8_t ETYPE_BLOCK  = 2;  // block
+constexpr uint8_t ETYPE_BLOCK  = 2;  // non-enemy block
 constexpr uint8_t ETYPE_PILL   = 5;  // Full Pill type
 constexpr uint8_t ETYPE_SPILL  = 6;  // Single Pill type
-constexpr uint8_t ETYPE_GBLOCK = 7;  // Unbreakable Gravity block
+constexpr uint8_t ETYPE_BROKEN = 7;  // indicates the entity was broken/popped
 
 constexpr uint8_t ROTATE_NORTH = 0;
 constexpr uint8_t ROTATE_EAST  = 1;

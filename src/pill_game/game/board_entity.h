@@ -18,10 +18,6 @@ struct BoardEntity {
     uint8_t Rotation : 2 {0};    // 0=0, 1=90, 2=180, 3=270
     // clang-format on
 
-    constexpr bool is_empty() const noexcept {
-        return *this == BoardEntity{};
-    }
-
     constexpr bool operator==(const BoardEntity& rhs) const noexcept {
         return Colour == rhs.Colour
                && EntityType == rhs.EntityType;
@@ -31,6 +27,9 @@ struct BoardEntity {
 
     uint32_t colour() const;
     bool has_gravity() const noexcept;
+    bool is_empty() const noexcept;
+    bool is_broken() const noexcept;
+    bool is_solid() const noexcept;
     bool is_enemy() const noexcept;
     bool is_pill() const noexcept;
     bool is_breakable() const noexcept;

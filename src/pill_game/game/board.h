@@ -62,6 +62,7 @@ class PillGameBoard {
     void remove_piece(const BoardPiece& piece) noexcept;
     bool can_tick_gravity(uint32_t row, uint32_t col) const noexcept;
 
+    int32_t connected_colour_count(uint32_t row, uint32_t col, bool horizontal) const noexcept;
     int32_t horizontal_colour_count(uint32_t row, uint32_t col) const noexcept;
     int32_t vertical_colour_count(uint32_t row, uint32_t col) const noexcept;
 
