@@ -113,7 +113,7 @@ struct GameContext {
     SDL_Texture* GameplayTexture{nullptr};
     std::array<FloatRect, ASSET_COUNT> AssetBounds{};
 
-    int32_t BackgroundFrame = 1;
+    int32_t BackgroundFrame = 0;
 
     Controller Input{};
     bool IsPaused{false};
