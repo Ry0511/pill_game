@@ -146,12 +146,12 @@ void PillGameBoard::init_board(const BoardInitParams& params, std::mt19937& rng_
                 }
                 entity.EntityType = etype;
                 entity.Colour = colour_dist(rng_device);
-                auto max_iter = 10; // upper bound
+                auto max_iter = 10;  // upper bound
 
                 while (
                     horizontal_colour_count(row, col) > params.MaxConnectedColours
                     || vertical_colour_count(row, col) > params.MaxConnectedColours
-                    && max_iter > 0 // not sure if this is required but just to be safe
+                           && max_iter > 0  // not sure if this is required but just to be safe
                 ) {
                     entity.Colour = colour_dist(rng_device);
                     --max_iter;
@@ -226,17 +226,20 @@ bool PillGameBoard::can_tick_gravity(uint32_t row, uint32_t col) const noexcept 
 
     const BoardEntity& down = this->operator()(row - 1, col);
 
-    if (down.is_solid()) {
-        return false;
+    if (ent.EntityType != ETYPE_PILL) {
+        return !down.is_solid();
     }
 
-    if (ent.EntityType == ETYPE_PILL) {
-        BoardPiece piece{*this, row, col};
-        const auto& [rrow, rcol] = piece.right_piece_pos();
-        return rrow > 0 && !this->operator()(rrow - 1, rcol).is_solid();
+    // need to check the adjacent piece
+    const BoardPiece& piece{*this, row, col};
+
+    if (piece.Rotation == ROTATE_NORTH) {
+        return !down.is_solid();
     }
 
-    return true;
+    const auto& [r, c] = piece.right_piece_pos();
+
+    return !down.is_solid() && r > 0 && !this->operator()(r - 1, c).is_solid();
 }
 
 int32_t PillGameBoard::connected_colour_count(uint32_t row, uint32_t col, bool horizontal) const noexcept {
@@ -294,11 +297,37 @@ int32_t PillGameBoard::tick_gravity() noexcept {
     for (uint32_t row = 1; row < GAME_BOARD_HEIGHT; ++row) {
         for (uint32_t col = 0; col < GAME_BOARD_WIDTH; ++col) {
             if (can_tick_gravity(row, col)) {
-                ++pieces_moved;
-                auto& up = this->operator()(row, col);
-                auto& down = this->operator()(row - 1, col);
-                down = up;
-                up = EMPTY_ENTITY;
+                auto& cur = this->operator()(row, col);
+
+                if (cur.EntityType == ETYPE_PILL && cur.Rotation == ROTATE_NORTH) {
+                    this->operator()(row - 1, col) = cur;
+                    this->operator()(row, col) = EMPTY_ENTITY;
+                    ++pieces_moved;
+
+                    BoardPiece piece{*this, row, col};
+                    const auto& [r, c] = piece.right_piece_pos();
+                    const auto& right = this->operator()(r, c);
+                    this->operator()(r - 1, col) = right;
+                    this->operator()(r, col) = EMPTY_ENTITY;
+                    ++pieces_moved;
+
+                } else if (cur.EntityType == ETYPE_PILL && cur.Rotation == ROTATE_SOUTH) {
+
+                    BoardPiece piece{*this, row, col};
+                    const auto& [r, c] = piece.right_piece_pos();
+                    const auto& right = this->operator()(r, c);
+                    this->operator()(r - 1, col) = right;
+                    this->operator()(r, col) = EMPTY_ENTITY;
+                    ++pieces_moved;
+
+                    this->operator()(row - 1, col) = cur;
+                    this->operator()(row, col) = EMPTY_ENTITY;
+                    ++pieces_moved;
+                } else {
+                    this->operator()(row - 1, col) = cur;
+                    this->operator()(row, col) = EMPTY_ENTITY;
+                    ++pieces_moved;
+                }
             }
         }
     }
