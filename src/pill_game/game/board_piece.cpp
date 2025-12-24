@@ -39,7 +39,7 @@ BoardPiece::BoardPiece(
     uint32_t row,
     uint32_t col
 ) noexcept
-    : Row(row), Column(col) {
+    : Row(static_cast<int8_t>(row)), Column(static_cast<int8_t>(col)) {
     Left = board(row, col);
     Rotation = Left.Rotation;
     Right = board(right_piece_pos());
@@ -55,10 +55,10 @@ std::tuple<int8_t, int8_t> BoardPiece::right_piece_pos() const noexcept {
 
     // clang-format off
     switch (Rotation) {
-        case ROTATE_NORTH: row = Row + 1; break;
-        case ROTATE_SOUTH: row = Row - 1; break;
-        case ROTATE_EAST : col = Column + 1; break;
-        case ROTATE_WEST : col = Column - 1; break;
+        case ROTATE_NORTH: row += 1; break;
+        case ROTATE_SOUTH: row -= 1; break;
+        case ROTATE_EAST : col += 1; break;
+        case ROTATE_WEST : col -= 1; break;
     }
     // clang-format on
 
@@ -77,7 +77,7 @@ void BoardPiece::move_left(const PillGameBoard& board) noexcept {
 }
 
 void BoardPiece::move_right(const PillGameBoard& board) noexcept {
-    if (!board.can_place_piece(*this) || Column >= GAME_BOARD_WIDTH) {
+    if (!board.can_place_piece(*this) || std::cmp_greater_equal(Column, GAME_BOARD_WIDTH)) {
         return;
     }
 
@@ -92,37 +92,20 @@ void BoardPiece::rotate_piece_clockwise(const PillGameBoard& board) noexcept {
         return;
     }
 
-    // TODO: After some play testing this current rotation system doesn't work. Rotations at the
-    //  edge of the screen feel odd and it is likely because we want the rotations to still happen
-    //  naturally i.e., don't skip rotations, just try to make the rotation work by actually
-    //  rotating the piece.
-    //
-    // i.e.,
-    //
-    // X X X X    X X X X    X X X X    G X X X    X X X X
-    // R G X X -> R X X X -> G R X X -> R X X X -> R G X X
-    // X X X X    G X X X    X X X X    X X X X    X X X X
-    //
+    BoardPiece p{*this};
+    p.rotate_piece(true);
 
-    auto rotate = Rotation;
-    auto banned_multi_rotate = Right.Rotation;
-
-    for (auto i = 0; i < 4; ++i) {
-        Rotation = (Rotation + 1U) % 4U;
-
-        bool banned_rotation = i > 0 && Rotation == banned_multi_rotate;
-        if (!banned_rotation && board.can_place_piece(*this)) {
-            break;
-        }
+    if (!board.can_place_piece(p)) {
+        p.shift_piece();
     }
 
-    if (!board.can_place_piece(*this)) {
-        Rotation = rotate;
+    if (!board.can_place_piece(p)) {
         return;
     }
 
-    Left.Rotation = Rotation;
-    Right.Rotation = opposite_rotation(Rotation);
+    p.Left.Rotation = p.Rotation;
+    p.Right.Rotation = opposite_rotation(p.Rotation);
+    *this = p;
 }
 
 void BoardPiece::rotate_piece_counter_clockwise(const PillGameBoard& board) noexcept {
@@ -130,29 +113,61 @@ void BoardPiece::rotate_piece_counter_clockwise(const PillGameBoard& board) noex
         return;
     }
 
-    auto rotate = Rotation;
-    auto banned_multi_rotate = Right.Rotation;
+    BoardPiece p{*this};
+    p.rotate_piece(false);
 
-    for (auto i = 0; i < 4; ++i) {
-        if (Rotation == 0U) {
-            Rotation = 3U;
-        } else {
-            --Rotation;
-        }
-
-        bool banned_rotation = i > 0 && Rotation == banned_multi_rotate;
-        if (!banned_rotation && board.can_place_piece(*this)) {
-            break;
-        }
+    if (!board.can_place_piece(p)) {
+        p.shift_piece();
     }
 
-    if (!board.can_place_piece(*this)) {
-        Rotation = rotate;
+    if (!board.can_place_piece(p)) {
         return;
     }
 
-    Left.Rotation = Rotation;
-    Right.Rotation = opposite_rotation(Rotation);
+    p.Left.Rotation = p.Rotation;
+    p.Right.Rotation = opposite_rotation(p.Rotation);
+    *this = p;
+}
+
+void BoardPiece::rotate_piece(bool clockwise) noexcept {
+
+    if (clockwise) {
+        Rotation = (Rotation + 1U) % 4U;
+        return;
+    }
+
+    if (Rotation == 0) {
+        Rotation = 3;
+    } else {
+        Rotation--;
+    }
+}
+
+void BoardPiece::shift_piece() noexcept {
+    int8_t row_shift{0};
+    int8_t col_shift{0};
+
+    //
+    // X X X    X X X    X X X    G X X    X X X
+    // R G X -> R X X -> G R X -> R X X -> R G X
+    // X X X    G X X    X X X    X X X    X X X
+    //
+    // R G X    R X X    G R X    X G X    R G X
+    // X X X -> G X X -> X X X -> X R X -> X X X
+    // X X X    X X X    X X X    X X X    X X X
+    //
+
+    // clang-format off
+    switch (Rotation) {
+        case ROTATE_NORTH: row_shift = {-1}; break;
+        case ROTATE_SOUTH: row_shift = {+1}; break;
+        case ROTATE_EAST : col_shift = {-1}; break;
+        case ROTATE_WEST : col_shift = {+1}; break;
+    }
+    // clang-format on
+
+    Row = static_cast<int8_t>(Row + row_shift);
+    Column = static_cast<int8_t>(Column + col_shift);
 }
 
 }  // namespace pill_game

@@ -191,18 +191,20 @@ bool PillGameBoard::can_piece_drop(const BoardPiece& piece) const noexcept {
 }
 
 bool PillGameBoard::can_place_piece(const BoardPiece& piece) const noexcept {
-    const auto& [rrow, rcol] = piece.right_piece_pos();
     const auto& [lrow, lcol] = piece.left_piece_pos();
+    const auto& [rrow, rcol] = piece.right_piece_pos();
 
-    if (rcol < 0 || rcol >= GAME_BOARD_WIDTH || rrow < 0 || rrow >= GAME_BOARD_HEIGHT) {
+    if (rcol < 0 || std::cmp_greater_equal(rcol, GAME_BOARD_WIDTH)
+        || rrow < 0 || std::cmp_greater_equal(rrow, GAME_BOARD_HEIGHT)) {
         return false;
     }
 
-    if (lcol < 0 || lcol >= GAME_BOARD_WIDTH || lrow < 0 || lrow >= GAME_BOARD_HEIGHT) {
+    if (lcol < 0 || std::cmp_greater_equal(lcol, GAME_BOARD_WIDTH)
+        || lrow < 0 || std::cmp_greater_equal(lrow, GAME_BOARD_HEIGHT)) {
         return false;
     }
 
-    return !this->operator()(piece.left_piece_pos()).is_solid()
+    return !this->operator()(lrow, lcol).is_solid()
            && !this->operator()(rrow, rcol).is_solid();
 }
 
@@ -231,7 +233,7 @@ bool PillGameBoard::can_tick_gravity(uint32_t row, uint32_t col) const noexcept 
     }
 
     // need to check the adjacent piece
-    const BoardPiece& piece{*this, row, col};
+    BoardPiece piece{*this, row, col};
 
     if (piece.Rotation == ROTATE_NORTH) {
         return !down.is_solid();
@@ -243,11 +245,11 @@ bool PillGameBoard::can_tick_gravity(uint32_t row, uint32_t col) const noexcept 
 }
 
 int32_t PillGameBoard::connected_colour_count(uint32_t row, uint32_t col, bool horizontal) const noexcept {
-    uint32_t count{0};
+    int32_t count{0};
     auto req_colour = this->operator()(row, col).Colour;
 
-    const int32_t max_val = horizontal ? GAME_BOARD_WIDTH : GAME_BOARD_HEIGHT;
-    const int32_t start_val = horizontal ? col : row;
+    const auto max_val = static_cast<int32_t>(horizontal ? GAME_BOARD_WIDTH : GAME_BOARD_HEIGHT);
+    const auto start_val = static_cast<int32_t>(horizontal ? col : row);
 
     for (int32_t i = (start_val + 1); i < max_val; ++i) {
         const auto& ent
@@ -312,7 +314,6 @@ int32_t PillGameBoard::tick_gravity() noexcept {
                     ++pieces_moved;
 
                 } else if (cur.EntityType == ETYPE_PILL && cur.Rotation == ROTATE_SOUTH) {
-
                     BoardPiece piece{*this, row, col};
                     const auto& [r, c] = piece.right_piece_pos();
                     const auto& right = this->operator()(r, c);
@@ -335,7 +336,7 @@ int32_t PillGameBoard::tick_gravity() noexcept {
 }
 
 int32_t PillGameBoard::break_pieces(int32_t min_req_for_break) noexcept {
-    uint32_t pieces_broken{0};
+    int32_t pieces_broken{0};
 
     // clear out any previously broken entities
     for (auto& ent : m_FlatGameBoard) {

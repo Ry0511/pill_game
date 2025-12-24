@@ -32,7 +32,7 @@ struct BoardPiece {
         int8_t row,
         int8_t column
     ) noexcept
-        : Left{left}, Right{right}, Rotation{rotation}, Row{row} {};
+        : Left{left}, Right{right}, Rotation{rotation}, Row{row}, Column(column) {};
 
     BoardPiece(const PillGameBoard& board, uint32_t row, uint32_t col) noexcept;
 
@@ -43,6 +43,8 @@ struct BoardPiece {
     void move_right(const PillGameBoard& board) noexcept;
     void rotate_piece_clockwise(const PillGameBoard& board) noexcept;
     void rotate_piece_counter_clockwise(const PillGameBoard& board) noexcept;
+    void rotate_piece(bool clockwise) noexcept;
+    void shift_piece() noexcept;
 };
 
 }  // namespace pill_game
