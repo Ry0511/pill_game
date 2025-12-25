@@ -301,29 +301,14 @@ int32_t PillGameBoard::tick_gravity() noexcept {
             if (can_tick_gravity(row, col)) {
                 auto& cur = this->operator()(row, col);
 
-                if (cur.EntityType == ETYPE_PILL && cur.Rotation == ROTATE_NORTH) {
-                    this->operator()(row - 1, col) = cur;
-                    this->operator()(row, col) = EMPTY_ENTITY;
-                    ++pieces_moved;
-
+                if (cur.EntityType == ETYPE_PILL) {
                     BoardPiece piece{*this, row, col};
-                    const auto& [r, c] = piece.right_piece_pos();
-                    const auto& right = this->operator()(r, c);
-                    this->operator()(r - 1, col) = right;
-                    this->operator()(r, col) = EMPTY_ENTITY;
-                    ++pieces_moved;
-
-                } else if (cur.EntityType == ETYPE_PILL && cur.Rotation == ROTATE_SOUTH) {
-                    BoardPiece piece{*this, row, col};
-                    const auto& [r, c] = piece.right_piece_pos();
-                    const auto& right = this->operator()(r, c);
-                    this->operator()(r - 1, col) = right;
-                    this->operator()(r, col) = EMPTY_ENTITY;
-                    ++pieces_moved;
-
-                    this->operator()(row - 1, col) = cur;
+                    const auto&[r, c] = piece.right_piece_pos();
+                    this->operator()(row-1, col) = piece.Left;
+                    this->operator()(r-1, c) = piece.Right;
                     this->operator()(row, col) = EMPTY_ENTITY;
-                    ++pieces_moved;
+                    this->operator()(r, c) = EMPTY_ENTITY;
+
                 } else {
                     this->operator()(row - 1, col) = cur;
                     this->operator()(row, col) = EMPTY_ENTITY;
@@ -355,8 +340,12 @@ int32_t PillGameBoard::break_pieces(int32_t min_req_for_break) noexcept {
             ) {
                 if (ent.EntityType == ETYPE_PILL) {
                     BoardPiece piece{*this, row, col};
-                    this->operator()(piece.right_piece_pos()).EntityType = ETYPE_SPILL;
+                    auto& r = this->operator()(piece.right_piece_pos());
+                    if (r.EntityType == ETYPE_PILL) {
+                        r.EntityType = ETYPE_SPILL;
+                    }
                 }
+
                 this->operator()(row, col).EntityType = ETYPE_BROKEN;
                 ++pieces_broken;
             }
