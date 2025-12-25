@@ -17,8 +17,8 @@ uint8_t opposite_rotation(uint8_t rotate) {
     switch (rotate) {
         case ROTATE_NORTH: return ROTATE_SOUTH; break;
         case ROTATE_SOUTH: return ROTATE_NORTH; break;
-        case ROTATE_EAST: return ROTATE_WEST; break;
-        case ROTATE_WEST: return ROTATE_EAST; break;
+        case ROTATE_EAST:  return ROTATE_WEST;  break;
+        case ROTATE_WEST:  return ROTATE_EAST;  break;
     }
     // clang-format on
     return rotate;
