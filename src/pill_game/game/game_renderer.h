@@ -147,15 +147,18 @@ struct GameContext {
     bool Running{false};
     Scene CurrentScene{Scene::None};
     Scene RequestedScene{Scene::Playing};
-    uint8_t CurrentLevel{15};
+    uint8_t CurrentLevel{3};
     bool AllowPills{true};
     bool AllowBlocks{false};
 
     uint64_t SceneTicks{0};
     float DeltaTime{0.0F};
     std::array<Timer, 16> Timers{};
+
     PillGameBoard TheBoard{};
-    BoardPiece ThePiece;
+    std::array<BoardPiece, ALL_PIECES.size()> AllPieces{};
+    uint8_t CurrentPieceIndex{0U};
+    BoardPiece ThePiece{};
 };
 
 std::mt19937& rng(void) noexcept;

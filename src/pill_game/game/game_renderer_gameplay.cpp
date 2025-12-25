@@ -104,11 +104,19 @@ void tick_scene_playing(void) {
         } else if (place_piece_next_frame) {
             board.place_piece(ctx().ThePiece);
             entities_broken_last_frame = board.break_pieces();
-            constexpr auto max_val = static_cast<int32_t>(ALL_PIECES.size() - 1ULL);
-            auto piece_dist = std::uniform_int_distribution<int32_t>(0, max_val);
-            the_piece = ALL_PIECES.at(piece_dist(rng()));
-            the_piece.Column = GAME_BOARD_CENTRE;
             place_piece_next_frame = false;
+
+            // get the next piece and shuffle the pieces if needed
+            auto& all_pieces = ctx().AllPieces;
+            auto& index = ctx().CurrentPieceIndex;
+            index = (index + 1U) % all_pieces.size();
+
+            if (index == 0U) {
+                std::shuffle(all_pieces.begin(), all_pieces.end(), rng());
+            }
+            ctx().ThePiece = all_pieces.at(index);
+
+
         } else {
             timer(TIMER_PIECE_DROP).Value *= 0.66F;
             place_piece_next_frame = true;
@@ -141,6 +149,13 @@ void first_tick_setup(void) {
     timer(TIMER_GRAVITY_TICK)   = Timer{0.25F, 1.0F , 0.25F };
     timer(TIMER_ENT_BREAK_TICK) = Timer{0.66F, 1.0F , 0.66F };
     // clang-format on
+
+    // initialise pieces and randomise the order
+    auto& all_pieces = ctx().AllPieces;
+    all_pieces = ALL_PIECES;
+    std::shuffle(all_pieces.begin(), all_pieces.end(), rng());
+    ctx().CurrentPieceIndex = 0U;
+    ctx().ThePiece = all_pieces.at(ctx().CurrentPieceIndex);
 
     // initialise the game board with the current difficulty settings
     ctx().TheBoard.init_board(
