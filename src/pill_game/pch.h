@@ -65,7 +65,7 @@ using std::uint32_t;
 using std::uint8_t;
 
 constexpr size_t GAME_BOARD_WIDTH = 8;
-constexpr size_t GAME_BOARD_HEIGHT = 16;
+constexpr size_t GAME_BOARD_HEIGHT = 17;
 constexpr size_t GAME_BOARD_SIZE = GAME_BOARD_WIDTH * GAME_BOARD_HEIGHT;
 
 static_assert(GAME_BOARD_WIDTH >= 6 && GAME_BOARD_WIDTH < std::numeric_limits<uint8_t>::max());

@@ -13,9 +13,12 @@
 namespace pill_game::game {
 
 namespace {
+
 GameContext game_context;
 std::mt19937 random_engine{0};
+
 void load_assets(void);
+
 }  // namespace
 
 GameContext& ctx(void) noexcept {
@@ -34,35 +37,11 @@ std::mt19937& rng(void) noexcept {
     return random_engine;
 }
 
-/*
-void init_background_texture(void) {
-    constexpr size_t tex_size = 2;
-    constexpr size_t channels = 4;
-
-    const SDL_PixelFormatDetails* fmt = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA8888);
-    uint32_t magenta = SDL_MapRGBA(fmt, nullptr, 91, 28, 119, 150);
-    uint32_t img_data[tex_size * tex_size]{
-        magenta,
-        0,
-        0,
-        magenta
-    };
-
-    SDL_Surface* surface = SDL_CreateSurfaceFrom(
-        tex_size,
-        tex_size,
-        SDL_PIXELFORMAT_RGBA8888,
-        &img_data[0],
-        tex_size * channels
-    );
-
-    background_texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_SetTextureScaleMode(background_texture, SDL_SCALEMODE_NEAREST);
-    SDL_DestroySurface(surface);
-}
- */
-
 int initialise(void) noexcept {
+    if (!SDL_SetAppMetadata("Pill Game", "0.0", "com.ry.pillgame")) {
+        PG_LOG(Warn, "Failed to set app metadata - {}", SDL_GetError());
+    }
+
     game_context = GameContext();
     random_engine = std::mt19937(std::random_device{}());
 
@@ -101,9 +80,19 @@ int initialise(void) noexcept {
     try {
         load_assets();
     } catch (const std::exception& ex) {
-        PG_LOG(Err, "Failed to load assets - ", ex.what());
+        PG_LOG(Err, "error during initialisation - ", ex.what());
         shutdown();
         return -1;
+    }
+
+    try {
+        init_audio();
+    } catch (const std::exception& ex) {
+        PG_LOG(Warn, "{}", ex.what());
+        PG_LOG(Warn, "No audio will be played");
+        ctx().AudioStream = nullptr;
+        ctx().AudioDeviceId = 0;
+        ctx().AudioSources = {};
     }
 
     return 0;
@@ -115,7 +104,6 @@ void shutdown(void) noexcept {
     SDL_DestroyRenderer(ctx().Renderer);
     SDL_DestroyWindow(ctx().Window);
     SDL_Quit();
-    game_context = GameContext();
 }
 
 namespace {

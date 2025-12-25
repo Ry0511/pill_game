@@ -131,15 +131,15 @@ void first_tick_setup(void) {
     const float speed = 1.0F + (0.0F * t);
 
     // clang-format off
-    timer(TIMER_BOARD_BUILDING) = Timer{15.0F, 1.0F  , 15.0F };
-    timer(TIMER_ENEMY_TEX1)     = Timer{0.2F , 1.0F  , 0.2F  };
-    timer(TIMER_ENEMY_TEX2)     = Timer{0.2F , 1.35F , 0.2F  };
-    timer(TIMER_PIECE_DROP)     = Timer{1.0F , speed , 1.0F  };
-    timer(TIMER_PIECE_HMOVE)    = Timer{1.0F , 8.0F  , 1.0F  };
-    timer(TIMER_PIECE_VMOVE)    = Timer{1.0F , 10.0F , 1.0F  };
-    timer(TIMER_BOARD_TICKING)  = Timer{0.02F, 1.0F  , 0.02F };
-    timer(TIMER_GRAVITY_TICK)   = Timer{0.25F, 1.0F  , 0.25F };
-    timer(TIMER_ENT_BREAK_TICK) = Timer{0.66F, 1.0F  , 0.66F };
+    timer(TIMER_BOARD_BUILDING) = Timer{15.0F, 1.0F , 15.0F };
+    timer(TIMER_ENEMY_TEX1)     = Timer{0.2F , 1.0F , 0.2F  };
+    timer(TIMER_ENEMY_TEX2)     = Timer{0.2F , 1.35F, 0.2F  };
+    timer(TIMER_PIECE_DROP)     = Timer{1.0F , speed, 1.0F  };
+    timer(TIMER_PIECE_HMOVE)    = Timer{1.0F , 8.0F , 1.0F  };
+    timer(TIMER_PIECE_VMOVE)    = Timer{1.0F , 10.0F, 1.0F  };
+    timer(TIMER_BOARD_TICKING)  = Timer{0.02F, 1.0F , 0.02F };
+    timer(TIMER_GRAVITY_TICK)   = Timer{0.25F, 1.0F , 0.25F };
+    timer(TIMER_ENT_BREAK_TICK) = Timer{0.66F, 1.0F , 0.66F };
     // clang-format on
 
     // initialise the game board with the current difficulty settings
@@ -298,7 +298,7 @@ void handle_input(void) {
     float t = static_cast<float>(ctx().CurrentLevel) / 20.0F;
 
     if (input.Down != 0) {
-        timer(TIMER_PIECE_DROP).Speed = 10.0F;
+        timer(TIMER_PIECE_DROP).Speed = 12.0F;
     } else {
         timer(TIMER_PIECE_DROP).Speed = 1.0F + (0.0F * t);
     }

@@ -44,6 +44,8 @@ int run_application() {
         ctx().DeltaTime = static_cast<float>(start_ticks - ticks_last_frame) / 1000.0F;
         ticks_last_frame = start_ticks;
 
+        tick_audio();
+
         // Render background image to window
         SDL_SetRenderTarget(renderer, nullptr);
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);

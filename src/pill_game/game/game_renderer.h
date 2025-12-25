@@ -13,13 +13,19 @@
 struct SDL_Window;
 struct SDL_Texture;
 struct SDL_Renderer;
+struct SDL_AudioStream;
 
 namespace pill_game::game {
 
 // clang-format off
-constexpr float  CELL_SIZE              = 32.0F;
-constexpr float  MIN_WINDOW_WIDTH       = 640.0F;
-constexpr float  MIN_WINDOW_HEIGHT      = 480.0F;
+
+constexpr float   CELL_SIZE             = 32.0F;
+constexpr float   MIN_WINDOW_WIDTH      = 640.0F;
+constexpr float   MIN_WINDOW_HEIGHT     = 480.0F;
+constexpr int32_t AUDIO_CHANNELS        = 1;
+constexpr int32_t AUDIO_FREQ            = 44100;
+// Audio format is F32
+
 constexpr size_t ASSET_INDEX_ENEMY      = 0;
 constexpr size_t ASSET_INDEX_PILL       = 1;
 constexpr size_t ASSET_INDEX_BACKGROUND = 2;
@@ -106,21 +112,42 @@ struct FloatRect {
     }
 };
 
+struct AudioSource {
+    uint32_t Position{0U};
+    uint32_t SizeInBytes{0U};
+    uint8_t* Data{nullptr};
+
+    constexpr AudioSource() = default;
+    constexpr AudioSource(uint32_t pos, uint32_t size, uint8_t* data) noexcept
+        : Position(pos), SizeInBytes(size), Data(data) {};
+    AudioSource(const AudioSource&) = delete;
+    AudioSource& operator=(const AudioSource&) = delete;
+    AudioSource(AudioSource&&) noexcept;
+    AudioSource& operator=(AudioSource&&) noexcept;
+
+    ~AudioSource() noexcept;
+    operator bool() const noexcept { return Data != nullptr; }
+};
+
 struct GameContext {
     SDL_Renderer* Renderer{nullptr};
     SDL_Window* Window{nullptr};
     SDL_Texture* TextureAtlas{nullptr};
     SDL_Texture* GameplayTexture{nullptr};
+    SDL_AudioStream* AudioStream{nullptr};
+    uint32_t AudioDeviceId{0};
     std::array<FloatRect, ASSET_COUNT> AssetBounds{};
 
     int32_t BackgroundFrame = 0;
+
+    std::array<AudioSource, 4> AudioSources{};
 
     Controller Input{};
     bool IsPaused{false};
     bool Running{false};
     Scene CurrentScene{Scene::None};
     Scene RequestedScene{Scene::Playing};
-    uint8_t CurrentLevel{20};
+    uint8_t CurrentLevel{15};
     bool AllowPills{true};
     bool AllowBlocks{false};
 
@@ -128,7 +155,7 @@ struct GameContext {
     float DeltaTime{0.0F};
     std::array<Timer, 16> Timers{};
     PillGameBoard TheBoard{};
-    BoardPiece ThePiece{};
+    BoardPiece ThePiece;
 };
 
 std::mt19937& rng(void) noexcept;
@@ -142,8 +169,10 @@ inline bool is_first_tick(void) noexcept {
 
 int run_application(void);
 int initialise(void) noexcept;
+void init_audio(void);
 void shutdown(void) noexcept;
 
+void tick_audio(void) noexcept;
 void tick_scene_main_menu(void);
 void tick_scene_game_setup(void);
 void tick_scene_playing(void);
