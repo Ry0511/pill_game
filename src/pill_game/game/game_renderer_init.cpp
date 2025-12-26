@@ -29,6 +29,10 @@ SDL_Texture* atlas(void) noexcept {
     return game_context.TextureAtlas;
 }
 
+const FloatRect& asset(size_t index) {
+    return game_context.AssetBounds.at(index);
+}
+
 Timer& timer(size_t index) {
     return game_context.Timers.at(index);
 }
@@ -163,7 +167,7 @@ void load_assets(void) {
 
     // store the asset starting positions in the packed atlas
     for (const stbrp_rect& rect : rects_to_pack) {
-        auto& asset = ctx().AssetBounds[rect.id];
+        auto& asset = ctx().AssetBounds.at(rect.id);
         asset = FloatRect{
             static_cast<float>(rect.x),
             static_cast<float>(rect.y),
@@ -189,9 +193,9 @@ void load_assets(void) {
         SDL_UpdateTexture(ctx().TextureAtlas, &sdl_rect, data, pitch);
     };
 
-    write_into_texture(ctx().AssetBounds[ASSET_INDEX_ENEMY], enemy_img.Data, enemy_img.pitch());
-    write_into_texture(ctx().AssetBounds[ASSET_INDEX_PILL], pill_img.Data, pill_img.pitch());
-    write_into_texture(ctx().AssetBounds[ASSET_INDEX_BACKGROUND], bg_images.data(), bg_width * 4);
+    write_into_texture(asset(ASSET_INDEX_ENEMY), enemy_img.Data, enemy_img.pitch());
+    write_into_texture(asset(ASSET_INDEX_PILL), pill_img.Data, pill_img.pitch());
+    write_into_texture(asset(ASSET_INDEX_BACKGROUND), bg_images.data(), bg_width * 4);
 }
 
 }  // namespace

@@ -163,6 +163,7 @@ struct GameContext {
 
 std::mt19937& rng(void) noexcept;
 SDL_Texture* atlas(void) noexcept;
+const FloatRect& asset(size_t index);
 Timer& timer(size_t index);
 GameContext& ctx(void) noexcept;
 

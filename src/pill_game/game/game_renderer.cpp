@@ -51,7 +51,7 @@ int run_application() {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        auto src = ctx().AssetBounds[ASSET_INDEX_BACKGROUND].as<SDL_FRect>();
+        auto src = asset(ASSET_INDEX_BACKGROUND).as<SDL_FRect>();
         src.w = src.h = 2.0F;
         src.y = (static_cast<float>(ctx().BackgroundFrame) * 2.0F);
 

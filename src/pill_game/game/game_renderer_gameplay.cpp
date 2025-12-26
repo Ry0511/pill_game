@@ -39,7 +39,7 @@ void render_game_board_texture(void);
 void handle_input(void);
 
 SDL_FRect enemy_texture_pos(bool alt_enemy, int frame) {
-    const auto& bounds = ctx().AssetBounds.at(ASSET_INDEX_ENEMY);
+    const auto& bounds = asset(ASSET_INDEX_ENEMY);
     return SDL_FRect{
         bounds.x + (CELL_SIZE * static_cast<float>(frame)),
         bounds.y + (alt_enemy ? CELL_SIZE : 0.0F),
@@ -139,15 +139,15 @@ void first_tick_setup(void) {
     const float speed = 1.0F + (0.0F * t);
 
     // clang-format off
-    timer(TIMER_BOARD_BUILDING) = Timer{15.0F, 1.0F , 15.0F };
-    timer(TIMER_ENEMY_TEX1)     = Timer{0.2F , 1.0F , 0.2F  };
-    timer(TIMER_ENEMY_TEX2)     = Timer{0.2F , 1.35F, 0.2F  };
-    timer(TIMER_PIECE_DROP)     = Timer{1.0F , speed, 1.0F  };
-    timer(TIMER_PIECE_HMOVE)    = Timer{1.0F , 8.0F , 1.0F  };
-    timer(TIMER_PIECE_VMOVE)    = Timer{1.0F , 10.0F, 1.0F  };
-    timer(TIMER_BOARD_TICKING)  = Timer{0.02F, 1.0F , 0.02F };
-    timer(TIMER_GRAVITY_TICK)   = Timer{0.25F, 1.0F , 0.25F };
-    timer(TIMER_ENT_BREAK_TICK) = Timer{0.66F, 1.0F , 0.66F };
+    timer(TIMER_BOARD_BUILDING) = Timer{ 15.0F, 1.0F , 15.0F };
+    timer(TIMER_ENEMY_TEX1)     = Timer{ 0.2F , 1.0F , 0.2F  };
+    timer(TIMER_ENEMY_TEX2)     = Timer{ 0.2F , 1.35F, 0.2F  };
+    timer(TIMER_PIECE_DROP)     = Timer{ 1.0F , speed, 1.0F  };
+    timer(TIMER_PIECE_HMOVE)    = Timer{ 1.0F , 8.0F , 1.0F  };
+    timer(TIMER_PIECE_VMOVE)    = Timer{ 1.0F , 10.0F, 1.0F  };
+    timer(TIMER_BOARD_TICKING)  = Timer{ 0.02F, 1.0F , 0.02F };
+    timer(TIMER_GRAVITY_TICK)   = Timer{ 0.25F, 1.0F , 0.25F };
+    timer(TIMER_ENT_BREAK_TICK) = Timer{ 0.66F, 1.0F , 0.66F };
     // clang-format on
 
     // initialise pieces and randomise the order
@@ -226,7 +226,7 @@ void draw_cell_entity(const BoardEntity& ent, int32_t row, int32_t col) {
     int32_t rotation = 0;
 
     if (ent.is_pill()) {
-        src = ctx().AssetBounds.at(ASSET_INDEX_PILL).as<SDL_FRect>();
+        src = asset(ASSET_INDEX_PILL).as<SDL_FRect>();
         if (ent.EntityType == ETYPE_SPILL) {
             src.x += CELL_SIZE;
         } else if (ent.EntityType == ETYPE_BROKEN) {
