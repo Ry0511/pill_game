@@ -9,6 +9,7 @@
 #include "pill_game/pch.h"
 
 #include "pill_game/game/board.h"
+#include "pill_game/game/bag_random.h"
 
 struct SDL_Window;
 struct SDL_Texture;
@@ -112,6 +113,10 @@ struct FloatRect {
     }
 };
 
+struct Vec2f {
+    float x, y;
+};
+
 struct AudioSource {
     uint32_t Position{0U};
     uint32_t SizeInBytes{0U};
@@ -134,7 +139,7 @@ struct GameContext {
     SDL_Window* Window{nullptr};
     SDL_Texture* TextureAtlas{nullptr};
     SDL_Texture* GameplayTexture{nullptr};
-    SDL_AudioStream* AudioStream{nullptr};
+    SDL_AudioStream* AudioStream{nullptr};  // TODO: This is the BGM stream
     uint32_t AudioDeviceId{0};
     std::array<FloatRect, ASSET_COUNT> AssetBounds{};
 
@@ -155,10 +160,9 @@ struct GameContext {
     float DeltaTime{0.0F};
     std::array<Timer, 16> Timers{};
 
-    PillGameBoard TheBoard{};
-    std::array<BoardPiece, ALL_PIECES.size()> AllPieces{};
-    uint8_t CurrentPieceIndex{0U};
-    BoardPiece ThePiece{};
+    PillGameBoard TheBoard;
+    BagRandom PieceRandomiser;
+    BoardPiece ThePiece;
 };
 
 std::mt19937& rng(void) noexcept;

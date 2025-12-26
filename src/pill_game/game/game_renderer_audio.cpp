@@ -68,6 +68,7 @@ void init_audio(void) {
     );
 
     if (audio_stream == nullptr) {
+        SDL_CloseAudioDevice(device);
         throw std::runtime_error{
             std::format("Failed to open audio device stream - {}", SDL_GetError())
         };
@@ -77,7 +78,14 @@ void init_audio(void) {
     ctx().AudioStream = audio_stream;
     SDL_ResumeAudioStreamDevice(ctx().AudioStream);
     SDL_SetAudioStreamGain(ctx().AudioStream, 0.1F);
-    load_audio();
+
+    try {
+        load_audio();
+    } catch (const std::exception& ex) {
+        SDL_DestroyAudioStream(audio_stream);
+        SDL_CloseAudioDevice(device);
+        throw ex;
+    }
 }
 
 void tick_audio(void) noexcept {

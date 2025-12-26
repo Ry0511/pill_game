@@ -77,8 +77,8 @@ int initialise(void) noexcept {
         ctx().Renderer,
         SDL_PIXELFORMAT_RGBA8888,
         SDL_TEXTUREACCESS_TARGET,
-        GAME_BOARD_WIDTH * static_cast<int32_t>(CELL_SIZE),
-        GAME_BOARD_HEIGHT * static_cast<int32_t>(CELL_SIZE)
+        1366,
+        768
     );
 
     try {
@@ -131,20 +131,18 @@ void load_assets(void) {
     uint32_t green = SDL_MapRGBA(fmt, nullptr, 44, 160, 28, 150);
     uint32_t black = 0x0;
 
-    std::array<uint32_t, bg_size> bg_images{black};
-
-    // Magenta & Black Background
-    bg_images[0 * 2 + 0] = magenta;
-    bg_images[0 * 2 + 1] = black;
-    bg_images[1 * 2 + 0] = black;
-    bg_images[1 * 2 + 1] = magenta;
-
-    // Green & Black Background
-    bg_images[2 * 2 + 0] = green;
-    bg_images[2 * 2 + 1] = black;
-    bg_images[3 * 2 + 0] = black;
-    bg_images[3 * 2 + 1] = green;
-
+    std::array<uint32_t, bg_size> bg_images{
+        // BG 1
+        magenta,
+        black,
+        black,
+        magenta,
+        // BG 2
+        green,
+        black,
+        black,
+        green,
+    };
     // Pack the assets into a single atlas
     std::array<stbrp_node, atlas_size> nodes{};
     stbrp_context packing_ctx{};

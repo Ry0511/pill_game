@@ -63,7 +63,6 @@ int run_application() {
         try {
             process_events();
             tick_game();
-            tick_scene_playing();
             ++ctx().SceneTicks;
         } catch (const std::exception& ex) {
             PG_LOG(Err, "an exception occurred - {}", ex.what());

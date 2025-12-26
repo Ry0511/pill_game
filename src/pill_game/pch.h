@@ -65,7 +65,7 @@ using std::uint32_t;
 using std::uint8_t;
 
 constexpr size_t GAME_BOARD_WIDTH = 8;
-constexpr size_t GAME_BOARD_HEIGHT = 17;
+constexpr size_t GAME_BOARD_HEIGHT = 16;
 constexpr size_t GAME_BOARD_SIZE = GAME_BOARD_WIDTH * GAME_BOARD_HEIGHT;
 
 static_assert(GAME_BOARD_WIDTH >= 6 && GAME_BOARD_WIDTH < std::numeric_limits<uint8_t>::max());
@@ -115,6 +115,8 @@ constexpr BoardEntity PILL_CYAN_E{1, ETYPE_PILL, ROTATE_EAST};
 constexpr BoardEntity PILL_CYAN_W{1, ETYPE_PILL, ROTATE_WEST};
 constexpr BoardEntity PILL_YELLOW_E{2, ETYPE_PILL, ROTATE_EAST};
 constexpr BoardEntity PILL_YELLOW_W{2, ETYPE_PILL, ROTATE_WEST};
+
+constexpr BoardPiece EMPTY_PIECE{EMPTY_ENTITY, EMPTY_ENTITY, 0, 0, 0};
 
 constexpr std::array<BoardPiece, 9> ALL_PIECES{
     BoardPiece{   PILL_RED_E,    PILL_RED_W, ROTATE_EAST, GAME_BOARD_TOP_ROW, GAME_BOARD_CENTRE},

@@ -32,9 +32,25 @@ int32_t entity_updates_from_gravity = 0;
 int32_t entities_broken_last_frame = 0;
 bool place_piece_next_frame{false};
 
+constexpr float board_height = static_cast<float>(GAME_BOARD_HEIGHT) * CELL_SIZE;
+constexpr float board_width = static_cast<float>(GAME_BOARD_WIDTH) * CELL_SIZE;
+
+float ent_xoffset{0.0F};
+float ent_yoffset{0.0F};
+
+Vec2f board_pos(int32_t row, int32_t col) {
+    const int32_t flipped_row = (static_cast<int32_t>(GAME_BOARD_HEIGHT) - 1) - row;
+    return Vec2f{
+        ent_xoffset + static_cast<float>(col) * CELL_SIZE,
+        ent_yoffset + static_cast<float>(flipped_row) * CELL_SIZE,
+    };
+}
+
 void first_tick_setup(void);
 void render_game_board(void);
-void draw_cell_entity(const BoardEntity& ent, int32_t row, int32_t col);
+void render_piece_hint(void);
+void render_board_piece(const BoardPiece& piece, const Vec2f& pos);
+void draw_cell_entity(const BoardEntity& ent, const Vec2f& pos);
 void render_game_board_texture(void);
 void handle_input(void);
 
@@ -68,7 +84,15 @@ void tick_scene_playing(void) {
         enemy_frame_tex2 = (enemy_frame_tex2 + 1) % 2;
     }
 
+    int iwidth{0};
+    int iheight{0};
+    const float padding = CELL_SIZE * 2.0F;
+    SDL_GetWindowSizeInPixels(ctx().Window, &iwidth, &iheight);
+    ent_xoffset = static_cast<float>(iwidth) * 0.25F;
+    ent_yoffset = (static_cast<float>(iheight) - (CELL_SIZE * 4.0F)) - board_height;
+
     render_game_board();
+    render_piece_hint();
     render_game_board_texture();
 
     // Currently 'starting up'
@@ -105,17 +129,7 @@ void tick_scene_playing(void) {
             board.place_piece(ctx().ThePiece);
             entities_broken_last_frame = board.break_pieces();
             place_piece_next_frame = false;
-
-            // get the next piece and shuffle the pieces if needed
-            auto& all_pieces = ctx().AllPieces;
-            auto& index = ctx().CurrentPieceIndex;
-            index = (index + 1U) % all_pieces.size();
-
-            if (index == 0U) {
-                std::shuffle(all_pieces.begin(), all_pieces.end(), rng());
-            }
-            ctx().ThePiece = all_pieces.at(index);
-
+            ctx().ThePiece = ctx().PieceRandomiser.fetch_next(rng());
 
         } else {
             timer(TIMER_PIECE_DROP).Value *= 0.66F;
@@ -150,12 +164,8 @@ void first_tick_setup(void) {
     timer(TIMER_ENT_BREAK_TICK) = Timer{ 0.66F, 1.0F , 0.66F };
     // clang-format on
 
-    // initialise pieces and randomise the order
-    auto& all_pieces = ctx().AllPieces;
-    all_pieces = ALL_PIECES;
-    std::shuffle(all_pieces.begin(), all_pieces.end(), rng());
-    ctx().CurrentPieceIndex = 0U;
-    ctx().ThePiece = all_pieces.at(ctx().CurrentPieceIndex);
+    ctx().PieceRandomiser.reset(rng());
+    ctx().ThePiece = ctx().PieceRandomiser.fetch_next(rng());
 
     // initialise the game board with the current difficulty settings
     ctx().TheBoard.init_board(
@@ -180,11 +190,15 @@ void render_game_board(void) {
 
     const auto& cur_piece = ctx().ThePiece;
     auto* renderer = ctx().Renderer;
-    auto* prev_texture = SDL_GetRenderTarget(renderer);
 
-    SDL_SetRenderTarget(renderer, ctx().GameplayTexture);
     SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
-    SDL_RenderClear(renderer);
+    SDL_FRect board_bounds{
+        ent_xoffset,
+        ent_yoffset,
+        32.0F * static_cast<float>(GAME_BOARD_WIDTH),
+        32.0F * static_cast<float>(GAME_BOARD_HEIGHT),
+    };
+    SDL_RenderFillRect(renderer, &board_bounds);
 
     const PillGameBoard& board = ctx().TheBoard;
 
@@ -195,33 +209,56 @@ void render_game_board(void) {
         }
         draw_cell_entity(
             ent,
-            i / static_cast<int32_t>(GAME_BOARD_WIDTH),
-            i % static_cast<int32_t>(GAME_BOARD_WIDTH)
+            board_pos(
+                i / static_cast<int32_t>(GAME_BOARD_WIDTH),
+                i % static_cast<int32_t>(GAME_BOARD_WIDTH)
+            )
         );
     }
 
     if (!timer(TIMER_BOARD_BUILDING).expired()) {
-        SDL_SetRenderTarget(renderer, prev_texture);
         return;
     }
 
     // draw current piece
-    draw_cell_entity(cur_piece.Left, cur_piece.Row, cur_piece.Column);
     const auto& [row, col] = cur_piece.right_piece_pos();
-    draw_cell_entity(cur_piece.Right, row, col);
-
-    SDL_SetRenderTarget(renderer, prev_texture);
+    draw_cell_entity(cur_piece.Left, board_pos(cur_piece.Row, cur_piece.Column));
+    draw_cell_entity(cur_piece.Right, board_pos(row, col));
 }
 
-void draw_cell_entity(const BoardEntity& ent, int32_t row, int32_t col) {
+void render_piece_hint(void) {
+    auto& rand = ctx().PieceRandomiser;
     auto* renderer = ctx().Renderer;
-    const int32_t flipped_row = (static_cast<int32_t>(GAME_BOARD_HEIGHT) - 1) - row;
-    SDL_FRect dst{
-        static_cast<float>(col) * CELL_SIZE,
-        static_cast<float>(flipped_row) * CELL_SIZE,
-        CELL_SIZE,
-        CELL_SIZE
+
+    SDL_FRect hint_region{
+        ent_xoffset + board_width + CELL_SIZE,
+        ent_yoffset,
+        CELL_SIZE * 2.0F,
+        CELL_SIZE * 2.0F,
     };
+
+    SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+    SDL_RenderFillRect(renderer, &hint_region);
+
+    Vec2f pos{hint_region.x, hint_region.y};
+    for (const auto& piece : rand.hints()) {
+        if (!piece.Left.is_empty()) {
+            render_board_piece(piece, pos);
+            pos.y += CELL_SIZE;
+        }
+    }
+}
+
+void render_board_piece(const BoardPiece& piece, const Vec2f& pos) {
+    // TODO: This assumes the piece is rotated L:EAST <- R:WEST
+    const auto& [row, col] = piece.right_piece_pos();
+    draw_cell_entity(piece.Left, pos);
+    draw_cell_entity(piece.Right, Vec2f{pos.x + CELL_SIZE, pos.y});
+}
+
+void draw_cell_entity(const BoardEntity& ent, const Vec2f& pos) {
+    auto* renderer = ctx().Renderer;
+    SDL_FRect dst{pos.x, pos.y, CELL_SIZE, CELL_SIZE};
     SDL_FRect src{};
     int32_t rotation = 0;
 
@@ -234,7 +271,7 @@ void draw_cell_entity(const BoardEntity& ent, int32_t row, int32_t col) {
         }
 
     } else if (ent.is_enemy()) {
-        bool is_alt_enemy = ((row + col) % 2 != 0);
+        bool is_alt_enemy = (static_cast<int>(pos.x + pos.y) % 2 != 0);
         src = enemy_texture_pos(
             is_alt_enemy,
             is_alt_enemy ? enemy_frame_tex2 : enemy_frame_tex1
@@ -264,34 +301,6 @@ void draw_cell_entity(const BoardEntity& ent, int32_t row, int32_t col) {
 
 void render_game_board_texture(void) {
     auto* renderer = ctx().Renderer;
-
-    int32_t iwidth{0};
-    int32_t iheight{0};
-    SDL_GetWindowSizeInPixels(ctx().Window, &iwidth, &iheight);
-
-    auto width = static_cast<float>(iwidth);
-    auto height = static_cast<float>(iheight);
-
-    // Centre draw the gameboard texture
-    float board_width = (CELL_SIZE + CELL_SIZE * 0.25F) * static_cast<float>(GAME_BOARD_WIDTH);
-    float board_height = (CELL_SIZE + CELL_SIZE * 0.25F) * static_cast<float>(GAME_BOARD_HEIGHT);
-
-    // If this is the case just try to fit it into the window
-    if (board_height > height) {
-        board_height = (CELL_SIZE * (height / CELL_SIZE)) - CELL_SIZE;
-    }
-
-    SDL_FRect dest{
-        (width * 0.5F) - (board_width * 0.5F),
-        std::max(
-            (height * 0.5F) - (board_height * 0.5F),
-            CELL_SIZE * 0.5F
-        ),
-        board_width,
-        board_height,
-    };
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderTexture(renderer, ctx().GameplayTexture, nullptr, &dest);
 }
 
 void handle_input(void) {
