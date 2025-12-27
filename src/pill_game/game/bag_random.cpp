@@ -24,14 +24,15 @@ BoardPiece BagRandom::fetch_next(std::mt19937& random) {
 
 std::array<BoardPiece, 2> BagRandom::hints() const noexcept {
     const auto size = static_cast<int32_t>(m_Pieces.size());
-    std::array<BoardPiece, 2> pieces{EMPTY_PIECE};
+    std::array<BoardPiece, 2> pieces{};
+    pieces.fill(EMPTY_PIECE);
 
     if ((m_CurrentPiece + 1) < size) {
-        pieces[0] = m_Pieces[m_CurrentPiece+1];
+        pieces[0] = m_Pieces.at(m_CurrentPiece+1);
     }
 
     if ((m_CurrentPiece + 2) < size) {
-        pieces[1] = m_Pieces[m_CurrentPiece+2];
+        pieces[1] = m_Pieces.at(m_CurrentPiece+2);
     }
 
     return pieces;

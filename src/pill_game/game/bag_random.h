@@ -31,8 +31,6 @@ class BagRandom {
    public:
     BoardPiece current() const noexcept { return m_Pieces.at(m_CurrentPiece); }
     std::array<BoardPiece, 2> hints() const noexcept;
-
-   public:
     BoardPiece fetch_next(std::mt19937& random);
 };
 

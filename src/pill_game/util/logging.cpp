@@ -27,7 +27,7 @@ std::string_view truncate_left(std::string_view str, size_t len) {
 
 }  // namespace
 
-void log(LogLevel level, const std::source_location& loc, const std::string& message) noexcept {
+void log(LogLevel level, const std::source_location& /*loc*/, const std::string& message) noexcept {
     std::string msg = std::format(
         "[{:>5}] | {}\n",
         // NOLINTNEXTLINE

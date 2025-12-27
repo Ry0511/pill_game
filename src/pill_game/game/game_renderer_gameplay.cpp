@@ -41,8 +41,8 @@ float ent_yoffset{0.0F};
 Vec2f board_pos(int32_t row, int32_t col) {
     const int32_t flipped_row = (static_cast<int32_t>(GAME_BOARD_HEIGHT) - 1) - row;
     return Vec2f{
-        ent_xoffset + static_cast<float>(col) * CELL_SIZE,
-        ent_yoffset + static_cast<float>(flipped_row) * CELL_SIZE,
+        ent_xoffset + (static_cast<float>(col) * CELL_SIZE),
+        ent_yoffset + (static_cast<float>(flipped_row) * CELL_SIZE),
     };
 }
 
@@ -86,7 +86,6 @@ void tick_scene_playing(void) {
 
     int iwidth{0};
     int iheight{0};
-    const float padding = CELL_SIZE * 2.0F;
     SDL_GetWindowSizeInPixels(ctx().Window, &iwidth, &iheight);
     ent_xoffset = static_cast<float>(iwidth) * 0.25F;
     ent_yoffset = (static_cast<float>(iheight) - (CELL_SIZE * 4.0F)) - board_height;
@@ -260,7 +259,6 @@ void draw_cell_entity(const BoardEntity& ent, const Vec2f& pos) {
     auto* renderer = ctx().Renderer;
     SDL_FRect dst{pos.x, pos.y, CELL_SIZE, CELL_SIZE};
     SDL_FRect src{};
-    int32_t rotation = 0;
 
     if (ent.is_pill()) {
         src = asset(ASSET_INDEX_PILL).as<SDL_FRect>();
@@ -300,7 +298,6 @@ void draw_cell_entity(const BoardEntity& ent, const Vec2f& pos) {
 }
 
 void render_game_board_texture(void) {
-    auto* renderer = ctx().Renderer;
 }
 
 void handle_input(void) {

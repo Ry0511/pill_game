@@ -33,9 +33,9 @@ Image::~Image() {
 
 void Image::white_mask() noexcept {
     for (int32_t i = 0; i < Width * Height * Components; i += Components) {
-        uint32_t* colour = reinterpret_cast<uint32_t*>(Data + i);
+        auto* colour = reinterpret_cast<uint32_t*>(Data + i);
         if (*colour == 0xFF000000) {
-            colour = 0x0;
+            *colour = 0x0;
         } else if ((*colour & 0x00FFFFFF) != 0x0) {
             *colour = 0xFFFFFFFF;
         }
@@ -43,10 +43,10 @@ void Image::white_mask() noexcept {
 }
 
 Colour::Colour(uint32_t colour)
-    : Red((colour & 0xFF000000) >> 24),
-      Green((colour & 0x00FF0000) >> 16),
-      Blue((colour & 0x0000FF00) >> 8),
-      Alpha((colour & 0x000000FF)) {
+    : Red(static_cast<uint8_t>((colour & 0xFF000000) >> 24)),
+      Green(static_cast<uint8_t>((colour & 0x00FF0000) >> 16)),
+      Blue(static_cast<uint8_t>((colour & 0x0000FF00) >> 8)),
+      Alpha(static_cast<uint8_t>((colour & 0x000000FF))) {
 }
 
 void tick_scene_main_menu(void) {

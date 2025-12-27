@@ -15,12 +15,11 @@ target_sources(pill_game PRIVATE ${PILL_GAME_SOURCE_FILES} ${PILL_GAME_HEADER_FI
 
 target_include_directories(pill_game PUBLIC ./src/)
 target_compile_features(pill_game PRIVATE cxx_std_23)
-target_compile_options(
-    pill_game
-    PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/W3>
-    $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra>
-)
+
+if (MSVC)
+  target_compile_options(pill_game PRIVATE /W4)
+endif ()
+
 target_precompile_headers(pill_game PRIVATE src/pill_game/pch.h)
 
 find_package(OpenGL REQUIRED)

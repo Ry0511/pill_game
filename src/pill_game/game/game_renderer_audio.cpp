@@ -95,7 +95,7 @@ void tick_audio(void) noexcept {
     AudioSource& bgm = audio_sources.at(0);
     if (SDL_GetAudioStreamQueued(stream) < static_cast<int32_t>(bgm.SizeInBytes)) {
         PG_LOG(Info, "Queueing BGM data");
-        SDL_PutAudioStreamData(stream, bgm.Data, bgm.SizeInBytes);
+        SDL_PutAudioStreamData(stream, bgm.Data, static_cast<int32_t>(bgm.SizeInBytes));
     }
 }
 

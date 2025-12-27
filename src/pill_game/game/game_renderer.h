@@ -152,7 +152,7 @@ struct GameContext {
     bool Running{false};
     Scene CurrentScene{Scene::None};
     Scene RequestedScene{Scene::Playing};
-    uint8_t CurrentLevel{3};
+    uint8_t CurrentLevel{20};
     bool AllowPills{true};
     bool AllowBlocks{false};
 
